@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, AlertCircle, RefreshCw, X, Sun, Moon } from 'lucide-react';
+import { AlertCircle, X, Menu } from 'lucide-react';
 import { usePosts } from './hooks/usePosts';
 import { useTags } from './hooks/useTags';
 import { InputBar } from './components/InputBar';
 import { Timeline } from './components/Timeline';
 import { Logo } from './components/Logo';
+import { SettingsDrawer } from './components/SettingsDrawer';
 
 export default function App() {
   const queryClient = useQueryClient();
   const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
-  const { data: tagsData, isLoading: isTagsLoading, error: tagsError } = useTags();
+  const { data: tagsData } = useTags();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -19,6 +20,7 @@ export default function App() {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const posts = postsData?.posts || [];
   const tags = tagsData?.tags || [];
@@ -47,7 +49,6 @@ export default function App() {
     });
   };
 
-
   // ピン留め切り替えハンドラ
   const handleTogglePin = (id: string, pinned: boolean) => {
     togglePin(
@@ -66,6 +67,7 @@ export default function App() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['posts'] }),
       queryClient.invalidateQueries({ queryKey: ['tags'] }),
+      queryClient.invalidateQueries({ queryKey: ['status'] }),
     ]);
     setTimeout(() => setIsRefreshing(false), 500);
   };
@@ -123,70 +125,47 @@ export default function App() {
           </p>
         </div>
 
-        {/* コントロール群（同期ステータス & テーマ切り替え） */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* 接続ステータスバッジ */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.75rem',
-              padding: '5px 10px',
-              borderRadius: 'var(--radius-full)',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-color)',
-            }}
-          >
-            {isTagsLoading ? (
-              <RefreshCw size={12} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
-            ) : tagsError ? (
-              <>
-                <AlertCircle size={12} style={{ color: 'var(--danger)' }} />
-                <span style={{ color: 'var(--danger)', fontWeight: 500 }}>Notionエラー</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={12} style={{ color: 'var(--success)' }} />
-                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>同期中</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                  ({tags.length}タグ)
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* テーマ切り替えボタン（ライト ☀️ / ダーク 🌙） */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--radius-full)',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            title={theme === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text-primary)';
-              e.currentTarget.style.borderColor = 'var(--border-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-secondary)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-            }}
-          >
-            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-          </button>
-        </div>
+        {/* 設定用ハンバーガーメニューボタン */}
+        <button
+          type="button"
+          onClick={() => setIsSettingsOpen(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          title="設定メニューを開く"
+          aria-label="設定メニューを開く"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-hover)';
+            e.currentTarget.style.background = 'var(--bg-tertiary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.background = 'var(--bg-secondary)';
+          }}
+        >
+          <Menu size={18} />
+        </button>
       </header>
+
+      {/* 設定ドロワー */}
+      <SettingsDrawer
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onRefreshAll={handleRefresh}
+        isRefreshingAll={isRefreshing}
+      />
 
       {/* メインコンテンツ */}
       <main>

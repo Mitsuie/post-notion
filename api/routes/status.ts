@@ -36,8 +36,8 @@ statusRouter.get('/', async (c) => {
 
   const notion = getNotionClient(env.NOTION_API_KEY);
 
-  // Posts DB と Tags DB の接続状況を並行取得
-  const [postsDbResult, tagsDbResult] = await Promise.allSettled([
+  // Posts DB, Tags DB, Daily Report DB の接続状況を並行取得
+  const [postsDbResult, tagsDbResult, dailyReportDbResult] = await Promise.allSettled([
     (async () => {
       const db: any = await notion.databases.retrieve({
         database_id: env.NOTION_POSTS_DATABASE_ID,
@@ -79,6 +79,35 @@ statusRouter.get('/', async (c) => {
         accessible: true,
       };
     })(),
+    (async () => {
+      if (!env.NOTION_DAILY_REPORT_DATABASE_ID) {
+        return {
+          connected: false,
+          configured: false,
+          error: '環境変数 NOTION_DAILY_REPORT_DATABASE_ID が未設定です',
+        };
+      }
+      const db: any = await notion.databases.retrieve({
+        database_id: env.NOTION_DAILY_REPORT_DATABASE_ID,
+      });
+      const title = db.title?.map((t: any) => t.plain_text).join('') || '日報DB';
+      const properties = Object.keys(db.properties || {});
+
+      // 簡易疎通確認
+      await notion.databases.query({
+        database_id: env.NOTION_DAILY_REPORT_DATABASE_ID,
+        page_size: 1,
+      });
+
+      return {
+        connected: true,
+        configured: true,
+        title,
+        idMasked: maskId(env.NOTION_DAILY_REPORT_DATABASE_ID),
+        properties,
+        accessible: true,
+      };
+    })(),
   ]);
 
   const postsDb =
@@ -99,7 +128,16 @@ statusRouter.get('/', async (c) => {
           error: (tagsDbResult.reason as any)?.message || String(tagsDbResult.reason),
         };
 
-  const isAllOk = postsDb.connected && tagsDb.connected;
+  const dailyReportDb =
+    dailyReportDbResult.status === 'fulfilled'
+      ? dailyReportDbResult.value
+      : {
+          connected: false,
+          idMasked: maskId(env.NOTION_DAILY_REPORT_DATABASE_ID),
+          error: (dailyReportDbResult.reason as any)?.message || String(dailyReportDbResult.reason),
+        };
+
+  const isAllOk = postsDb.connected && tagsDb.connected && (dailyReportDb.connected || !env.NOTION_DAILY_REPORT_DATABASE_ID);
 
   return c.json({
     status: isAllOk ? 'ok' : 'degraded',
@@ -110,5 +148,7 @@ statusRouter.get('/', async (c) => {
     },
     postsDb,
     tagsDb,
+    dailyReportDb,
   });
+
 });

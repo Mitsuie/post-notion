@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Pin, Hash, X, Search } from 'lucide-react';
+import { Send, Pin, Hash, X, Search, Calendar } from 'lucide-react';
 import type { Tag, CreatePostInput } from '../types';
 
 interface InputBarProps {
@@ -12,6 +12,7 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
   const [content, setContent] = useState('');
   const [body, setBody] = useState('');
   const [isPinned, setIsPinned] = useState(false);
+  const [linkDailyReport, setLinkDailyReport] = useState(true);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
@@ -31,11 +32,20 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
     const trimmedTitle = content.trim();
     if (!trimmedTitle) return;
 
+    // クライアントのローカル日付（YYYY-MM-DD）
+    const todayStr = new Intl.DateTimeFormat('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date()).replace(/\//g, '-');
+
     onSubmit({
       title: trimmedTitle,
       body: body.trim() || undefined,
       tagIds: selectedTags.map((t) => t.id),
       pinned: isPinned,
+      linkDailyReport,
+      clientDate: todayStr,
     });
 
     // 0秒クリア & フォーカス維持
@@ -43,6 +53,7 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
     setBody('');
     setSelectedTags([]);
     setIsPinned(false);
+    // 日報紐付けは「デフォルトで適用」のため、trueを維持
     setShowTagPicker(false);
     setTagSearchQuery('');
 
@@ -638,9 +649,34 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
+            title={isPinned ? 'ピン固定を解除' : 'タイムライン最上部にピン固定'}
           >
             <Pin size={14} style={{ fill: isPinned ? 'currentColor' : 'none' }} />
             {isPinned ? 'ピン固定中' : 'ピン留め'}
+          </button>
+
+          {/* 日報紐付けトグルボタン (デフォルト適用) */}
+          <button
+            type="button"
+            onClick={() => setLinkDailyReport(!linkDailyReport)}
+            style={{
+              background: linkDailyReport ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+              border: `1px solid ${linkDailyReport ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+              borderRadius: 'var(--radius-sm)',
+              padding: '6px 12px',
+              color: linkDailyReport ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              fontWeight: linkDailyReport ? 600 : 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title={linkDailyReport ? '当日の日報ページに自動連携（クリックで解除）' : '日報への連携をスキップ（クリックで連携）'}
+          >
+            <Calendar size={14} />
+            {linkDailyReport ? '日報: ON' : '日報: OFF'}
           </button>
         </div>
 

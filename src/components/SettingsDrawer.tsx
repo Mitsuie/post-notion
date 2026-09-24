@@ -12,6 +12,7 @@ import {
   Command,
   Info,
   ShieldCheck,
+  Calendar,
 } from 'lucide-react';
 
 interface SettingsDrawerProps {
@@ -43,6 +44,14 @@ interface StatusData {
     title?: string;
     idMasked?: string;
     tagsCount?: number;
+    error?: string;
+  };
+  dailyReportDb?: {
+    connected: boolean;
+    configured?: boolean;
+    title?: string;
+    idMasked?: string;
+    properties?: string[];
     error?: string;
   };
 }
@@ -391,6 +400,51 @@ export function SettingsDrawer({
                     </p>
                   )}
                 </div>
+
+                {/* 日報データベース (DB_日報) */}
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '12px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <Calendar size={13} style={{ color: 'var(--accent-primary)' }} />
+                      <span>{statusData.dailyReportDb?.title || '日報DB'}</span>
+                    </div>
+                    {statusData.dailyReportDb?.connected ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--success)', fontSize: '0.72rem', fontWeight: 500 }}>
+                        <CheckCircle2 size={11} />
+                        正常
+                      </span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
+                        <AlertCircle size={11} />
+                        {statusData.dailyReportDb?.configured === false ? '未設定' : 'エラー'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                    <span>ID: {statusData.dailyReportDb?.idMasked || '未設定'}</span>
+                    {statusData.dailyReportDb?.connected && (
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                        連携中
+                      </span>
+                    )}
+                  </div>
+
+                  {statusData.dailyReportDb?.error && (
+                    <p style={{ color: 'var(--danger)', fontSize: '0.72rem', marginTop: '4px' }}>
+                      {statusData.dailyReportDb.error}
+                    </p>
+                  )}
+                </div>
+
 
                 {/* API認証ステータス */}
                 <div

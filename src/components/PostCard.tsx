@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, Send, X, ExternalLink, User } from 'lucide-react';
+import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, Send, X, ExternalLink, User, Calendar } from 'lucide-react';
 import type { Post, Tag } from '../types';
 import { usePostBlocks } from '../hooks/usePostBlocks';
 import { usePostComments, useCreateComment } from '../hooks/usePostComments';
@@ -245,28 +245,49 @@ export function PostCard({
           fontSize: '0.75rem',
         }}
       >
-        {/* 詳細展開ボタン */}
-        <button
-          type="button"
-          onClick={() => setShowDetails(!showDetails)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: showDetails ? 'var(--accent-primary)' : 'var(--text-muted)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '4px 6px',
-            borderRadius: 'var(--radius-sm)',
-            transition: 'color 0.15s ease',
-            fontWeight: showDetails ? 600 : 400,
-          }}
-        >
-          <FileText size={13} />
-          <span>{showDetails ? '本文を閉じる' : '本文を表示'}</span>
-          {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* 詳細展開ボタン */}
+          <button
+            type="button"
+            onClick={() => setShowDetails(!showDetails)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: showDetails ? 'var(--accent-primary)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 6px',
+              borderRadius: 'var(--radius-sm)',
+              transition: 'color 0.15s ease',
+              fontWeight: showDetails ? 600 : 400,
+            }}
+          >
+            <FileText size={13} />
+            <span>{showDetails ? '本文を閉じる' : '本文を表示'}</span>
+            {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+
+          {/* 日報連携マーク */}
+          {post.dailyReport && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '3px 5px',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--accent-primary)',
+                background: 'var(--accent-light)',
+                lineHeight: 1,
+              }}
+              title="日報連携済み (DB_日報)"
+            >
+              <Calendar size={13} />
+            </span>
+          )}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* 1. Notionで開く */}

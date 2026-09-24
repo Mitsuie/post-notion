@@ -17,6 +17,9 @@ export interface Post {
     name?: string;
   }[];
   pinned: boolean;
+  dailyReport?: {
+    id: string;
+  } | null;
   commentsCount?: number;
   url?: string;
   isOptimistic?: boolean; // 楽観的更新フラグ
@@ -27,6 +30,8 @@ export interface CreatePostInput {
   body?: string;
   tagIds?: string[];
   pinned?: boolean;
+  linkDailyReport?: boolean;
+  clientDate?: string;
 }
 
 export interface PostComment {

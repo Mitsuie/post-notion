@@ -280,6 +280,11 @@ postsRouter.get('/', async (c) => {
       const pinnedKey = findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox');
       const pinned = pinnedKey ? !!props[pinnedKey]?.checkbox : false;
 
+      // Daily Report (Relation)
+      const dailyReportKey = findPropertyKey(props, ['DB_日報', '日報', 'Daily Report', 'デイリー'], 'relation');
+      const dailyRelations = dailyReportKey ? props[dailyReportKey]?.relation || [] : [];
+      const dailyReport = dailyRelations.length > 0 ? { id: dailyRelations[0].id } : null;
+
       // Created By
       const createdBy = {
         id: page.created_by?.id || '',
@@ -305,6 +310,7 @@ postsRouter.get('/', async (c) => {
         createdBy,
         tags,
         pinned,
+        dailyReport,
         commentsCount,
         url: page.url,
       };
@@ -375,6 +381,61 @@ postsRouter.post('/', async (c) => {
       };
     }
 
+    // 日報リレーション設定（デフォルト適用: linkDailyReport !== false）
+    let dailyReportLinked = false;
+    let dailyReportWarning: string | undefined = undefined;
+
+    if (payload.linkDailyReport !== false && env.NOTION_DAILY_REPORT_DATABASE_ID) {
+      try {
+        const dailyDbId = env.NOTION_DAILY_REPORT_DATABASE_ID;
+        // ターゲット日付を決定（クライアント指定日付、またはAsia/Tokyoの当日）
+        let targetDate = payload.clientDate;
+        if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+          targetDate = new Intl.DateTimeFormat('ja-JP', {
+            timeZone: 'Asia/Tokyo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(new Date()).replace(/\//g, '-');
+        }
+
+        // 日報DBのプロパティから日付プロパティ名を自動解決
+        const dailyDb = await notion.databases.retrieve({ database_id: dailyDbId });
+        const dateKey = findPropertyKey(dailyDb.properties, ['日付', 'Date', '作成日'], 'date') || '日付';
+
+        // 当日の日報ページをクエリ検索
+        const dailyQuery = await notion.databases.query({
+          database_id: dailyDbId,
+          filter: {
+            property: dateKey,
+            date: {
+              equals: targetDate,
+            },
+          },
+          page_size: 1,
+        });
+
+        if (dailyQuery.results.length > 0) {
+          const dailyPageId = dailyQuery.results[0].id;
+          const dailyRelKey = findPropertyKey(props, ['DB_日報', '日報', 'Daily Report', 'デイリー'], 'relation') || 'DB_日報';
+          if (props[dailyRelKey]) {
+            properties[dailyRelKey] = {
+              relation: [{ id: dailyPageId }],
+            };
+            dailyReportLinked = true;
+          }
+        } else {
+          // 当日の日報ページが見つからない場合: 仕様に基づきスキップ
+          dailyReportLinked = false;
+          dailyReportWarning = `日付 ${targetDate} の日報ページが見つからなかったため、日報リレーション付与をスキップしました`;
+          console.warn(`[posts.post] ${dailyReportWarning}`);
+        }
+      } catch (dailyErr: any) {
+        console.warn('Failed to resolve daily report relation, skipping:', dailyErr.message || dailyErr);
+        dailyReportWarning = `日報連携処理中にエラーが発生したためスキップしました: ${dailyErr.message || String(dailyErr)}`;
+      }
+    }
+
     // コメント追加回数の初期化（0）
     const commentsCountKey = findPropertyKey(
       props,
@@ -405,6 +466,8 @@ postsRouter.post('/', async (c) => {
     return c.json({
       success: true,
       id: createdPage.id,
+      dailyReportLinked,
+      warning: dailyReportWarning,
     });
   } catch (error: any) {
     console.error('Failed to create post in Notion:', error);
@@ -414,6 +477,7 @@ postsRouter.post('/', async (c) => {
     );
   }
 });
+
 
 // 投稿プロパティ更新（ピン留め動的トグルなど）
 postsRouter.patch('/:id', async (c) => {

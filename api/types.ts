@@ -18,8 +18,8 @@ export type PostItem = {
     name: string;
   }[];
   pinned: boolean;
-  parentId?: string;
-  repliesCount?: number;
+  commentsCount?: number;
+  url?: string;
 };
 
 export type TagItem = {
@@ -29,7 +29,29 @@ export type TagItem = {
 
 export type CreatePostPayload = {
   title: string;
+  body?: string;
   tagIds?: string[];
   pinned?: boolean;
-  parentId?: string;
 };
+
+export type UpdatePostPayload = {
+  pinned?: boolean;
+};
+
+export type CommentItem = {
+  id: string;
+  discussionId: string;
+  text: string;
+  createdTime: string;
+  createdBy: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+  };
+};
+
+export type CreateCommentPayload = {
+  text: string;
+  discussionId?: string;
+};
+

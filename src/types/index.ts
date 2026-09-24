@@ -17,13 +17,33 @@ export interface Post {
     name?: string;
   }[];
   pinned: boolean;
-  parentId?: string;
+  commentsCount?: number;
+  url?: string;
   isOptimistic?: boolean; // 楽観的更新フラグ
 }
 
 export interface CreatePostInput {
   title: string;
+  body?: string;
   tagIds?: string[];
   pinned?: boolean;
-  parentId?: string;
 }
+
+export interface PostComment {
+  id: string;
+  discussionId: string;
+  text: string;
+  createdTime: string;
+  createdBy: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+  };
+  isOptimistic?: boolean;
+}
+
+export interface CreateCommentInput {
+  text: string;
+  discussionId?: string;
+}
+

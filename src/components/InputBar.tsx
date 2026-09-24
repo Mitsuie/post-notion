@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Pin, Hash, X, Search } from 'lucide-react';
 import type { Tag, CreatePostInput } from '../types';
-import { extractAndResolveTags } from '../utils/tagParser';
 
 interface InputBarProps {
   availableTags: Tag[];
@@ -11,6 +10,7 @@ interface InputBarProps {
 
 export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProps) {
   const [content, setContent] = useState('');
+  const [body, setBody] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [showTagPicker, setShowTagPicker] = useState(false);
@@ -19,35 +19,27 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const tagPickerRef = useRef<HTMLDivElement>(null);
 
-  // 本文変更時に自動で #ハッシュタグ を検出して選択リストにマージ
+  // タイトル変更ハンドラ（改行はスペースに置換して禁止）
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newText = e.target.value;
+    const newText = e.target.value.replace(/[\r\n]+/g, ' ');
     setContent(newText);
-
-    // 本文中のハッシュタグを自動解決
-    const detectedTags = extractAndResolveTags(newText, availableTags);
-    if (detectedTags.length > 0) {
-      setSelectedTags((prev) => {
-        const existingIds = new Set(prev.map((t) => t.id));
-        const toAdd = detectedTags.filter((t) => !existingIds.has(t.id));
-        return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
-      });
-    }
   };
 
   // 送信処理（摩擦ゼロ: 即時クリア & フォーカス維持）
   const handleSend = () => {
-    const trimmed = content.trim();
-    if (!trimmed) return;
+    const trimmedTitle = content.trim();
+    if (!trimmedTitle) return;
 
     onSubmit({
-      title: trimmed,
+      title: trimmedTitle,
+      body: body.trim() || undefined,
       tagIds: selectedTags.map((t) => t.id),
       pinned: isPinned,
     });
 
     // 0秒クリア & フォーカス維持
     setContent('');
+    setBody('');
     setSelectedTags([]);
     setIsPinned(false);
     setShowTagPicker(false);
@@ -59,12 +51,49 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
     }, 10);
   };
 
-  // キーボードショートカット (Cmd/Ctrl + Enter)
+  // タイトル欄キーボードイベント (Cmd/Ctrl + Enter で送信、通常のEnterによる改行は禁止)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 日本語IME等の変換確定時のEnterはスルー
+    if (e.nativeEvent.isComposing) {
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        handleSend();
+      } else {
+        // Notionタイトル用のため、通常のEnterキーによる改行を無効化
+        e.preventDefault();
+      }
+    }
+  };
+
+  // 本文欄キーボードイベント (Cmd/Ctrl + Enter で送信、通常のEnterによる改行は許可)
+  const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.nativeEvent.isComposing) return;
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // ペースト時にも改行をスペースに置換して挿入
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    const pasteText = e.clipboardData.getData('text');
+    const sanitized = pasteText.replace(/[\r\n]+/g, ' ');
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const updated = content.substring(0, start) + sanitized + content.substring(end);
+    setContent(updated);
+
+    setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + sanitized.length;
+    }, 0);
   };
 
   // タグピッカー外クリックで閉じる
@@ -109,9 +138,64 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
         border: '1px solid var(--border-color)',
       }}
     >
-      {/* 選択されたタグのバッジ */}
+      {/* テキスト入力エリア（タイトル用・改行禁止・ウィンドウ表示） */}
+      <textarea
+        ref={textareaRef}
+        value={content}
+        onChange={handleContentChange}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        placeholder="いま考えていること、タイトル... (改行不可 / Cmd+Enter で即送信)"
+        rows={2}
+        style={{
+          width: '100%',
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-md)',
+          padding: '10px 12px',
+          color: 'var(--text-primary)',
+          fontSize: '0.95rem',
+          lineHeight: 1.5,
+          resize: 'none',
+          fontFamily: 'inherit',
+          outline: 'none',
+          marginBottom: '8px',
+          transition: 'border-color 0.15s ease',
+        }}
+        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
+        onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
+      />
+
+      {/* 本文入力エリア（タイトル入力欄とタグ表示部分の間に新設） */}
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        onKeyDown={handleBodyKeyDown}
+        placeholder="本文・詳細メモ (任意、改行可、Markdown対応)..."
+        rows={3}
+        style={{
+          width: '100%',
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-md)',
+          padding: '10px 12px',
+          color: 'var(--text-primary)',
+          fontSize: '0.875rem',
+          lineHeight: 1.6,
+          resize: 'vertical',
+          fontFamily: 'inherit',
+          outline: 'none',
+          marginTop: '0px',
+          marginBottom: selectedTags.length > 0 ? '12px' : '8px',
+          transition: 'border-color 0.15s ease',
+        }}
+        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
+        onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
+      />
+
+      {/* 選択されたタグのバッジ（タイトル入力欄・本文欄の下に配置） */}
       {selectedTags.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
           {selectedTags.map((tag) => (
             <span
               key={tag.id}
@@ -148,27 +232,6 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
           ))}
         </div>
       )}
-
-      {/* テキスト入力エリア */}
-      <textarea
-        ref={textareaRef}
-        value={content}
-        onChange={handleContentChange}
-        onKeyDown={handleKeyDown}
-        placeholder="いま考えていること、覚え書き、思考の断片... (Cmd/Ctrl + Enter で即送信)"
-        rows={3}
-        style={{
-          width: '100%',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          color: 'var(--text-primary)',
-          fontSize: '0.975rem',
-          lineHeight: 1.6,
-          resize: 'none',
-          fontFamily: 'inherit',
-        }}
-      />
 
       {/* フッター操作バー */}
       <div

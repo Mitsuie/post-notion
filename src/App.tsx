@@ -9,7 +9,7 @@ import { Logo } from './components/Logo';
 
 export default function App() {
   const queryClient = useQueryClient();
-  const { data: postsData, isLoading: isPostsLoading, createPost, isCreating } = usePosts();
+  const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
   const { data: tagsData, isLoading: isTagsLoading, error: tagsError } = useTags();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
@@ -45,6 +45,19 @@ export default function App() {
         setErrorMessage(err.message || '投稿の送信に失敗しました');
       },
     });
+  };
+
+
+  // ピン留め切り替えハンドラ
+  const handleTogglePin = (id: string, pinned: boolean) => {
+    togglePin(
+      { id, pinned },
+      {
+        onError: (err: any) => {
+          setErrorMessage(err.message || 'ピン留めの更新に失敗しました');
+        },
+      }
+    );
   };
 
   // 手動リフレッシュ
@@ -191,6 +204,7 @@ export default function App() {
           isLoading={isPostsLoading}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
+          onTogglePin={handleTogglePin}
         />
       </main>
     </div>

@@ -51,7 +51,7 @@ export function usePosts() {
           },
           tags: (newPostInput.tagIds || []).map((id) => ({ id })),
           pinned: !!newPostInput.pinned,
-          parentId: newPostInput.parentId,
+          commentsCount: 0,
           isOptimistic: true, // 送信中フラグ
         };
 
@@ -75,10 +75,49 @@ export function usePosts() {
     },
   });
 
+  // ピン留め動的トグル
+  const togglePinMutation = useMutation({
+    mutationFn: async ({ id, pinned }: { id: string; pinned: boolean }) => {
+      const res = await fetch(`/api/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned }),
+      });
+      if (!res.ok) {
+        throw new Error('ピン留めの更新に失敗しました');
+      }
+      return res.json();
+    },
+    onMutate: async ({ id, pinned }) => {
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      const previousData = queryClient.getQueryData<{ posts: Post[] }>(['posts']);
+
+      if (previousData) {
+        queryClient.setQueryData<{ posts: Post[] }>(['posts'], {
+          posts: previousData.posts.map((post) =>
+            post.id === id ? { ...post, pinned } : post
+          ),
+        });
+      }
+
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['posts'], context.previousData);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+
   return {
     ...postsQuery,
     createPost: createPostMutation.mutate,
     createPostAsync: createPostMutation.mutateAsync,
     isCreating: createPostMutation.isPending,
+    togglePin: togglePinMutation.mutate,
+    isTogglingPin: togglePinMutation.isPending,
   };
 }

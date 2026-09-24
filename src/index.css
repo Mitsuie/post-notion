@@ -156,3 +156,60 @@ body {
 [data-theme="dark"] .logo-img-light {
   display: none !important;
 }
+
+/* Markdown Content Styles */
+.markdown-content {
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+}
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.markdown-content h1 { font-size: 1.1rem; }
+.markdown-content h2 { font-size: 1rem; }
+.markdown-content h3 { font-size: 0.9rem; }
+.markdown-content p {
+  margin-bottom: 8px;
+}
+.markdown-content ul, .markdown-content ol {
+  padding-left: 20px;
+  margin-bottom: 8px;
+}
+.markdown-content li {
+  margin-bottom: 2px;
+}
+.markdown-content code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-primary);
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color);
+}
+.markdown-content pre {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+.markdown-content blockquote {
+  border-left: 3px solid var(--accent-primary);
+  padding-left: 10px;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+.markdown-content a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}

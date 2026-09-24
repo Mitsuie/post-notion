@@ -33,15 +33,29 @@ export function PostCard({
   // コメント投稿ミューテーション（楽観的更新付き）
   const createCommentMutation = useCreateComment(post.id);
 
-  // 日時フォーマット (例: "9/23 00:45")
+  // 日時フォーマット (今年: "9/23 00:45"、過去年・未来年: "2025/9/23 00:45")
   const formatDate = (isoString: string) => {
     try {
       const d = new Date(isoString);
+      const now = new Date();
+      const year = d.getFullYear();
       const month = d.getMonth() + 1;
       const day = d.getDate();
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
+      if (year !== now.getFullYear()) {
+        return `${year}/${month}/${day} ${hours}:${minutes}`;
+      }
       return `${month}/${day} ${hours}:${minutes}`;
+    } catch {
+      return isoString;
+    }
+  };
+
+  // 完全日時フォーマット (ツールチップ用: "2026/9/23 00:45:00")
+  const formatFullDate = (isoString: string) => {
+    try {
+      return new Date(isoString).toLocaleString('ja-JP');
     } catch {
       return isoString;
     }
@@ -155,7 +169,10 @@ export function PostCard({
               <Loader2 size={12} className="animate-spin" /> 送信中...
             </span>
           ) : (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+            <span
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}
+              title={formatFullDate(post.createdTime)}
+            >
               <Clock size={12} /> {formatDate(post.createdTime)}
             </span>
           )}
@@ -552,7 +569,7 @@ export function PostCard({
                           <Loader2 size={10} className="animate-spin" /> 送信中...
                         </span>
                       ) : (
-                        <span>{formatDate(c.createdTime)}</span>
+                        <span title={formatFullDate(c.createdTime)}>{formatDate(c.createdTime)}</span>
                       )}
                     </div>
                   </div>

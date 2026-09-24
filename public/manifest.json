@@ -1,7 +1,7 @@
 {
   "name": "Post-Notion",
   "short_name": "Post-Notion",
-  "description": "摩擦ゼロのパーソナルSNS風ナレッジ収集基盤",
+  "description": "パーソナルSNS風ナレッジ収集基盤",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",

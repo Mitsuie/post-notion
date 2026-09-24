@@ -121,7 +121,7 @@ export default function App() {
         <div>
           <Logo size="md" />
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            摩擦ゼロのパーソナルSNS風ナレッジ収集基盤
+            パーソナルSNS風ナレッジ収集基盤
           </p>
         </div>
 

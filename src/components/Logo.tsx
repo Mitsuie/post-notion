@@ -39,21 +39,21 @@ export function Logo({ size = 'md', showText = true }: LogoProps) {
         }}
       />
 
-      {/* タイトルワードマーク */}
+      {/* タイトルワードマーク（提案2: メカニカル・モノスペース） */}
       {showText && (
         <span
           style={{
             fontSize,
-            fontWeight: 700,
-            letterSpacing: '-0.03em',
+            fontFamily: "'JetBrains Mono', monospace",
+            letterSpacing: '-0.02em',
             display: 'inline-flex',
             alignItems: 'baseline',
             lineHeight: 1,
           }}
         >
-          <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>Post</span>
-          <span style={{ color: 'var(--text-muted)', margin: '0 1px', fontWeight: 400 }}>-</span>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>Notion</span>
+          <span style={{ color: 'var(--logo-post)', fontWeight: 700 }}>Post</span>
+          <span style={{ color: 'var(--logo-sep)', margin: '0 2px', fontWeight: 500 }}>-</span>
+          <span style={{ color: 'var(--logo-notion)', fontWeight: 800 }}>Notion</span>
         </span>
       )}
     </div>

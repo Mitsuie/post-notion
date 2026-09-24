@@ -21,6 +21,11 @@
   --accent-hover: #4338ca;
   --accent-light: #eef2ff;
   --accent-border: #c7d2fe;
+
+  /* Industrial Logo Colors (Proposal 2) */
+  --logo-post: #09090b;
+  --logo-sep: #94a3b8;
+  --logo-notion: #334155;
   
   --pinned-color: #b45309;
   --pinned-bg: #fef3c7;
@@ -67,6 +72,11 @@
   --accent-hover: #4f46e5;
   --accent-light: rgba(99, 102, 241, 0.15);
   --accent-border: rgba(99, 102, 241, 0.3);
+
+  /* Industrial Logo Colors (Proposal 2 - Dark) */
+  --logo-post: #f8fafc;
+  --logo-sep: #64748b;
+  --logo-notion: #cbd5e1;
   
   --pinned-color: #fbbf24;
   --pinned-bg: rgba(251, 191, 36, 0.12);

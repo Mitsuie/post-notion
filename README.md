@@ -254,4 +254,5 @@ npm run serve
 
 ## 📜 ライセンス
 
-Private Repository (Personal Knowledge Base)
+本プロジェクトは [MIT License](LICENSE) の下で公開されています。  
+詳細は [LICENSE](LICENSE) ファイルをご参照ください。

@@ -5,8 +5,6 @@ import {
   Sun,
   Moon,
   Database,
-  CheckCircle2,
-  AlertCircle,
   RefreshCw,
   Sliders,
   Command,
@@ -14,6 +12,7 @@ import {
   ShieldCheck,
   Calendar,
 } from 'lucide-react';
+import { DbStatusCard } from './DbStatusCard';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -313,151 +312,48 @@ export function SettingsDrawer({
             ) : statusData ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {/* Posts データベース */}
-                <div
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '12px',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Database size={13} style={{ color: 'var(--accent-primary)' }} />
-                      <span>{statusData.postsDb?.title || 'ポストDB'}</span>
-                    </div>
-                    {statusData.postsDb?.connected ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--success)', fontSize: '0.72rem', fontWeight: 500 }}>
-                        <CheckCircle2 size={11} />
-                        正常
-                      </span>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
-                        <AlertCircle size={11} />
-                        エラー
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginBottom: '6px' }}>
-                    ID: {statusData.postsDb?.idMasked || '未設定'}
-                  </div>
-
-                  {statusData.postsDb?.properties && statusData.postsDb.properties.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                      {statusData.postsDb.properties.map((prop) => (
-                        <span
-                          key={prop}
-                          style={{
-                            background: 'var(--bg-card)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '1px 6px',
-                            fontSize: '0.68rem',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {prop}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {statusData.postsDb?.error && (
-                    <p style={{ color: 'var(--danger)', fontSize: '0.72rem', marginTop: '4px' }}>
-                      {statusData.postsDb.error}
-                    </p>
-                  )}
-                </div>
+                <DbStatusCard
+                  title={statusData.postsDb?.title || 'ポストDB'}
+                  icon={<Database size={13} style={{ color: 'var(--accent-primary)' }} />}
+                  connected={statusData.postsDb?.connected}
+                  idMasked={statusData.postsDb?.idMasked}
+                  properties={statusData.postsDb?.properties}
+                  error={statusData.postsDb?.error}
+                />
 
                 {/* Tags データベース */}
-                <div
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '12px',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Database size={13} style={{ color: '#10b981' }} />
-                      <span>{statusData.tagsDb?.title || 'タグDB'}</span>
-                    </div>
-                    {statusData.tagsDb?.connected ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--success)', fontSize: '0.72rem', fontWeight: 500 }}>
-                        <CheckCircle2 size={11} />
-                        正常
-                      </span>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: statusData.tagsDb?.configured === false ? 'var(--text-muted)' : 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
-                        <AlertCircle size={11} />
-                        {statusData.tagsDb?.configured === false ? '未設定 (任意)' : 'エラー'}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                    <span>ID: {statusData.tagsDb?.idMasked || '未設定'}</span>
-                    {statusData.tagsDb?.connected && typeof statusData.tagsDb?.tagsCount === 'number' && (
+                <DbStatusCard
+                  title={statusData.tagsDb?.title || 'タグDB'}
+                  icon={<Database size={13} style={{ color: '#10b981' }} />}
+                  connected={statusData.tagsDb?.connected}
+                  configured={statusData.tagsDb?.configured}
+                  idMasked={statusData.tagsDb?.idMasked}
+                  extraInfo={
+                    statusData.tagsDb?.connected && typeof statusData.tagsDb?.tagsCount === 'number' ? (
                       <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
                         {statusData.tagsDb.tagsCount}件のタグ登録
                       </span>
-                    )}
-                  </div>
-
-                  {statusData.tagsDb?.error && (
-                    <p style={{ color: 'var(--danger)', fontSize: '0.72rem', marginTop: '4px' }}>
-                      {statusData.tagsDb.error}
-                    </p>
-                  )}
-                </div>
+                    ) : undefined
+                  }
+                  error={statusData.tagsDb?.error}
+                />
 
                 {/* 日報データベース (DB_日報) */}
-                <div
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '12px',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Calendar size={13} style={{ color: 'var(--accent-primary)' }} />
-                      <span>{statusData.dailyReportDb?.title || '日報DB'}</span>
-                    </div>
-                    {statusData.dailyReportDb?.connected ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--success)', fontSize: '0.72rem', fontWeight: 500 }}>
-                        <CheckCircle2 size={11} />
-                        正常
-                      </span>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: statusData.dailyReportDb?.configured === false ? 'var(--text-muted)' : 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
-                        <AlertCircle size={11} />
-                        {statusData.dailyReportDb?.configured === false ? '未設定 (任意)' : 'エラー'}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                    <span>ID: {statusData.dailyReportDb?.idMasked || '未設定'}</span>
-                    {statusData.dailyReportDb?.connected && (
+                <DbStatusCard
+                  title={statusData.dailyReportDb?.title || '日報DB'}
+                  icon={<Calendar size={13} style={{ color: 'var(--accent-primary)' }} />}
+                  connected={statusData.dailyReportDb?.connected}
+                  configured={statusData.dailyReportDb?.configured}
+                  idMasked={statusData.dailyReportDb?.idMasked}
+                  extraInfo={
+                    statusData.dailyReportDb?.connected ? (
                       <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
                         連携中
                       </span>
-                    )}
-                  </div>
-
-                  {statusData.dailyReportDb?.error && (
-                    <p style={{ color: 'var(--danger)', fontSize: '0.72rem', marginTop: '4px' }}>
-                      {statusData.dailyReportDb.error}
-                    </p>
-                  )}
-                </div>
+                    ) : undefined
+                  }
+                  error={statusData.dailyReportDb?.error}
+                />
 
 
                 {/* API認証ステータス */}

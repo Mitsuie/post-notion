@@ -94,11 +94,25 @@
   --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.25);
 }
 
+/* Safe Area Inset ユーティリティ */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  /* iPhoneの横向き時等のテキスト自動拡大を防止 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -110,6 +124,8 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   transition: background-color 0.2s ease, color 0.2s ease;
+  /* iOS PWAでの不要な全画面バウンス（白い背景チラ見え）を抑制 */
+  overscroll-behavior-y: none;
 }
 
 /* Glassmorphism utility */

@@ -25,7 +25,7 @@ export default function App() {
   const posts = postsData?.posts || [];
   const tags = tagsData?.tags || [];
 
-  // テーマ変更を HTML data-theme 属性、localStorage、favicon に同期
+  // テーマ変更を HTML data-theme 属性、localStorage、favicon、theme-color meta に同期
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('post-notion-theme', theme);
@@ -33,6 +33,11 @@ export default function App() {
     const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null;
     if (favicon) {
       favicon.href = theme === 'dark' ? '/icon_dark.png' : '/icon_light.png';
+    }
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme === 'dark' ? '#0a0f1d' : '#f8fafc');
     }
   }, [theme]);
 
@@ -73,13 +78,23 @@ export default function App() {
   };
 
   return (
-    <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px', minHeight: '100vh' }}>
+    <div
+      style={{
+        maxWidth: '640px',
+        margin: '0 auto',
+        paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)',
+        paddingLeft: 'max(env(safe-area-inset-left, 0px), 16px)',
+        paddingRight: 'max(env(safe-area-inset-right, 0px), 16px)',
+        minHeight: '100dvh',
+      }}
+    >
       {/* エラートースト通知 */}
       {errorMessage && (
         <div
           style={{
             position: 'fixed',
-            top: '16px',
+            top: 'calc(max(env(safe-area-inset-top, 0px), 16px) + 8px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 100,

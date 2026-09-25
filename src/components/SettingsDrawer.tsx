@@ -149,7 +149,10 @@ export function SettingsDrawer({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '16px 20px',
+            paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)',
+            paddingBottom: '16px',
+            paddingLeft: '20px',
+            paddingRight: 'max(env(safe-area-inset-right, 0px), 20px)',
             borderBottom: '1px solid var(--border-color)',
           }}
         >
@@ -179,7 +182,17 @@ export function SettingsDrawer({
         </div>
 
         {/* ドロワーコンテンツ（スクロール可能エリア） */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px',
+            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 28px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
+          }}
+        >
           
           {/* セクション1: 外観（テーマ設定） */}
           <section>

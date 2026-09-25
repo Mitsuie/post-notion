@@ -85,10 +85,6 @@ post-notion/
 ├── server/                     # 【Node.js スタンドアロン実行用】
 │   └── index.ts                # dist/静的配信 + Hono APIマウント (Port 3000)
 ├── public/                     # PWAマニフェスト、アプリアイコン
-├── reference/                  # プロジェクト設計書・仕様書・運用ガイド
-│   ├── Notionで構築するSNS風ナレッジ収集基盤.md
-│   ├── GitHub_Flow開発ワークフロー.md
-│   └── Phase3_手法B_Tailscale実装計画書.md
 ├── index.html                  # HTMLテンプレート
 ├── package.json
 ├── tsconfig.json
@@ -236,21 +232,10 @@ npm run serve
 ## 🌿 開発ワークフロー（ブランチ運用）
 
 本プロジェクトでは **GitHub Flow** を採用しています。
-詳細な運用手順、ブランチ命名規則、コミット規約については [reference/GitHub_Flow開発ワークフロー.md](reference/GitHub_Flow開発ワークフロー.md) をご参照ください。
 
 - **本番ブランチ**: `main`（直接 push 禁止、PR 経由でマージ）
-- **作業ブランチ**: `feat/*`, `fix/*`, `chore/*`, `docs/*`
-- **コミットメッセージ**: Conventional Commits（`feat:`, `fix:`, `chore:` 等）
-
----
-
-## 📄 ドキュメント・仕様書一覧
-
-より詳細なアーキテクチャ設計や将来構想については、`reference/` ディレクトリ配下のドキュメントをご覧ください：
-
-- [Notionで構築するSNS風ナレッジ収集基盤.md](reference/Notionで構築するSNS風ナレッジ収集基盤.md): システム全体の基本設計書・UI仕様・キャッシュ設計
-- [GitHub_Flow開発ワークフロー.md](reference/GitHub_Flow開発ワークフロー.md): ブランチ運用・デプロイ手順書
-- [Phase3_手法B_Tailscale実装計画書.md](reference/Phase3_手法B_Tailscale実装計画書.md): Tailscale / Node.jsセルフホスト実装計画書
+- **作業ブランチ**: `feat/*`, `fix/*`, `chore/*`, `docs/*`, `refactor/*`
+- **コミットメッセージ**: Conventional Commits（`feat:`, `fix:`, `chore:`, `refactor:` 等）
 
 ---
 

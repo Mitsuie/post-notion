@@ -29,8 +29,8 @@ statusRouter.get('/', async (c) => {
       },
       tagsDb: {
         connected: false,
-        configured: !!env.NOTION_TAGS_DATABASE_ID,
-        error: env.NOTION_TAGS_DATABASE_ID ? '環境変数が未設定です' : undefined,
+        configured: !!env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim() !== '',
+        error: (env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim()) ? '環境変数が未設定です' : undefined,
       },
     });
   }
@@ -61,7 +61,7 @@ statusRouter.get('/', async (c) => {
       };
     })(),
     (async () => {
-      if (!env.NOTION_TAGS_DATABASE_ID) {
+      if (!env.NOTION_TAGS_DATABASE_ID || !env.NOTION_TAGS_DATABASE_ID.trim()) {
         return {
           connected: false,
           configured: false,
@@ -89,11 +89,11 @@ statusRouter.get('/', async (c) => {
       };
     })(),
     (async () => {
-      if (!env.NOTION_DAILY_REPORT_DATABASE_ID) {
+      if (!env.NOTION_DAILY_REPORT_DATABASE_ID || !env.NOTION_DAILY_REPORT_DATABASE_ID.trim()) {
         return {
           connected: false,
           configured: false,
-          error: '環境変数 NOTION_DAILY_REPORT_DATABASE_ID が未設定です',
+          title: '日報DB',
         };
       }
       const db: any = await notion.databases.retrieve({
@@ -128,26 +128,29 @@ statusRouter.get('/', async (c) => {
           error: (postsDbResult.reason as any)?.message || String(postsDbResult.reason),
         };
 
+  const hasTagsDb = !!env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim() !== '';
   const tagsDb =
     tagsDbResult.status === 'fulfilled'
       ? tagsDbResult.value
       : {
           connected: false,
-          configured: !!env.NOTION_TAGS_DATABASE_ID,
+          configured: hasTagsDb,
           idMasked: maskId(env.NOTION_TAGS_DATABASE_ID),
           error: (tagsDbResult.reason as any)?.message || String(tagsDbResult.reason),
         };
 
+  const hasDailyReportDb = !!env.NOTION_DAILY_REPORT_DATABASE_ID && env.NOTION_DAILY_REPORT_DATABASE_ID.trim() !== '';
   const dailyReportDb =
     dailyReportDbResult.status === 'fulfilled'
       ? dailyReportDbResult.value
       : {
           connected: false,
+          configured: hasDailyReportDb,
           idMasked: maskId(env.NOTION_DAILY_REPORT_DATABASE_ID),
           error: (dailyReportDbResult.reason as any)?.message || String(dailyReportDbResult.reason),
         };
 
-  const isAllOk = postsDb.connected && (tagsDb.connected || !env.NOTION_TAGS_DATABASE_ID) && (dailyReportDb.connected || !env.NOTION_DAILY_REPORT_DATABASE_ID);
+  const isAllOk = postsDb.connected && (tagsDb.connected || !hasTagsDb) && (dailyReportDb.connected || !hasDailyReportDb);
 
   return c.json({
     status: isAllOk ? 'ok' : 'degraded',

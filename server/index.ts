@@ -8,17 +8,27 @@ import { fileURLToPath } from 'node:url';
 import { app as apiApp } from '../api/app.ts';
 import type { Bindings } from '../api/types.ts';
 
-// 環境変数の読み込み (.env を優先し、無ければ .dev.vars をフォールバック)
 const cwd = process.cwd();
 const envPath = path.resolve(cwd, '.env');
 const devVarsPath = path.resolve(cwd, '.dev.vars');
 
-if (fs.existsSync(envPath)) {
-  dotenv.config({ path: envPath });
-} else if (fs.existsSync(devVarsPath)) {
-  dotenv.config({ path: devVarsPath });
-} else {
-  dotenv.config();
+// 環境変数の読み込みヘルパー（リクエストごとに .dev.vars / .env の最新状態を反映）
+function getLatestEnv(): Record<string, string | undefined> {
+  let fileEnv: Record<string, string> = {};
+  if (fs.existsSync(envPath)) {
+    try {
+      fileEnv = dotenv.parse(fs.readFileSync(envPath, 'utf-8'));
+    } catch {}
+  } else if (fs.existsSync(devVarsPath)) {
+    try {
+      fileEnv = dotenv.parse(fs.readFileSync(devVarsPath, 'utf-8'));
+    } catch {}
+  }
+
+  return {
+    ...process.env,
+    ...fileEnv,
+  };
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,15 +37,17 @@ const distDir = path.resolve(__dirname, '../dist');
 
 const serverApp = new Hono<{ Bindings: Bindings }>();
 
-// 1. 環境変数の注入（c.env に process.env を透過的に注入）
+// 1. 環境変数の注入（最新の .dev.vars / .env を c.env に透過的に注入）
 serverApp.use('*', async (c, next) => {
   const current = (c.env || {}) as Partial<Bindings>;
+  const latest = getLatestEnv();
+
   // @ts-ignore
   c.env = {
-    NOTION_API_KEY: current.NOTION_API_KEY ?? process.env.NOTION_API_KEY ?? '',
-    NOTION_POSTS_DATABASE_ID: current.NOTION_POSTS_DATABASE_ID ?? process.env.NOTION_POSTS_DATABASE_ID ?? '',
-    NOTION_TAGS_DATABASE_ID: current.NOTION_TAGS_DATABASE_ID ?? process.env.NOTION_TAGS_DATABASE_ID ?? '',
-    NOTION_DAILY_REPORT_DATABASE_ID: current.NOTION_DAILY_REPORT_DATABASE_ID ?? process.env.NOTION_DAILY_REPORT_DATABASE_ID ?? '',
+    NOTION_API_KEY: (current.NOTION_API_KEY ?? latest.NOTION_API_KEY ?? '').trim(),
+    NOTION_POSTS_DATABASE_ID: (current.NOTION_POSTS_DATABASE_ID ?? latest.NOTION_POSTS_DATABASE_ID ?? '').trim(),
+    NOTION_TAGS_DATABASE_ID: (current.NOTION_TAGS_DATABASE_ID ?? latest.NOTION_TAGS_DATABASE_ID ?? '').trim(),
+    NOTION_DAILY_REPORT_DATABASE_ID: (current.NOTION_DAILY_REPORT_DATABASE_ID ?? latest.NOTION_DAILY_REPORT_DATABASE_ID ?? '').trim(),
   };
   await next();
 });

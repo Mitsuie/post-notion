@@ -14,7 +14,7 @@ tagsRouter.get('/', async (c) => {
     );
   }
 
-  if (!env.NOTION_TAGS_DATABASE_ID) {
+  if (!env.NOTION_TAGS_DATABASE_ID || !env.NOTION_TAGS_DATABASE_ID.trim()) {
     return c.json({ tags: [], configured: false });
   }
 

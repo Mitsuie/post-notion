@@ -24,6 +24,7 @@ export default function App() {
 
   const posts = postsData?.posts || [];
   const tags = tagsData?.tags || [];
+  const isTagsConfigured = tagsData?.configured !== false;
 
   // テーマ変更を HTML data-theme 属性、localStorage、favicon、theme-color meta に同期
   useEffect(() => {
@@ -187,6 +188,7 @@ export default function App() {
         {/* 高速投稿入力フォーム */}
         <InputBar
           availableTags={tags}
+          isTagsConfigured={isTagsConfigured}
           onSubmit={handlePostSubmit}
           isSubmitting={isCreating}
         />
@@ -195,6 +197,7 @@ export default function App() {
         <Timeline
           posts={posts}
           availableTags={tags}
+          isTagsConfigured={isTagsConfigured}
           isLoading={isPostsLoading}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}

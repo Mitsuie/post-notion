@@ -36,11 +36,10 @@ async function testNotion() {
   const postsDbId = env.NOTION_POSTS_DATABASE_ID;
   const tagsDbId = env.NOTION_TAGS_DATABASE_ID;
 
-  if (!apiKey || !postsDbId || !tagsDbId) {
+  if (!apiKey || !postsDbId) {
     console.error('❌ 必要な環境変数が不足しています:');
     if (!apiKey) console.error('  - NOTION_API_KEY が未設定です');
     if (!postsDbId) console.error('  - NOTION_POSTS_DATABASE_ID が未設定です');
-    if (!tagsDbId) console.error('  - NOTION_TAGS_DATABASE_ID が未設定です');
     process.exit(1);
   }
 
@@ -48,26 +47,30 @@ async function testNotion() {
 
   const notion = new Client({ auth: apiKey });
 
-  // 1. タグ管理データベースのテスト
+  // 1. タグ管理データベースのテスト (任意)
   console.log('\n--- 1. タグ管理データベース (Tags DB) の接続テスト ---');
-  try {
-    const tagsDb = await notion.databases.retrieve({ database_id: tagsDbId });
-    console.log('✅ タグ管理DBの取得成功:', (tagsDb as any).title?.[0]?.plain_text || '名称未設定');
-    
-    const tagsQuery = await notion.databases.query({
-      database_id: tagsDbId,
-      page_size: 10,
-    });
-    console.log(`✅ タグ取得成功 (取得件数: ${tagsQuery.results.length}件):`);
-    tagsQuery.results.forEach((page: any, index) => {
-      const titleKey = Object.keys(page.properties).find((k) => page.properties[k].type === 'title');
-      const name = titleKey ? page.properties[titleKey]?.title?.[0]?.plain_text : '未設定';
-      console.log(`   [${index + 1}] ID: ${page.id.slice(0, 8)}... | 名前: ${name}`);
-    });
-  } catch (error: any) {
-    console.error('❌ タグ管理DBへのアクセス失敗:', error.message);
-    if (error.code === 'object_not_found') {
-      console.error('   👉 原因: Database IDが誤っているか、該当DBにインテグレーションの「コネクトの追加」が行われていません。');
+  if (!tagsDbId) {
+    console.log('⚠️ NOTION_TAGS_DATABASE_ID が未設定です（タグ機能は無効となります）。');
+  } else {
+    try {
+      const tagsDb = await notion.databases.retrieve({ database_id: tagsDbId });
+      console.log('✅ タグ管理DBの取得成功:', (tagsDb as any).title?.[0]?.plain_text || '名称未設定');
+      
+      const tagsQuery = await notion.databases.query({
+        database_id: tagsDbId,
+        page_size: 10,
+      });
+      console.log(`✅ タグ取得成功 (取得件数: ${tagsQuery.results.length}件):`);
+      tagsQuery.results.forEach((page: any, index) => {
+        const titleKey = Object.keys(page.properties).find((k) => page.properties[k].type === 'title');
+        const name = titleKey ? page.properties[titleKey]?.title?.[0]?.plain_text : '未設定';
+        console.log(`   [${index + 1}] ID: ${page.id.slice(0, 8)}... | 名前: ${name}`);
+      });
+    } catch (error: any) {
+      console.error('❌ タグ管理DBへのアクセス失敗:', error.message);
+      if (error.code === 'object_not_found') {
+        console.error('   👉 原因: Database IDが誤っているか、該当DBにインテグレーションの「コネクトの追加」が行われていません。');
+      }
     }
   }
 

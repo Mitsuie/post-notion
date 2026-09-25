@@ -79,6 +79,7 @@ function matchesTagFilter(postTags: { id: string }[], selectedTagIds: string[]):
 interface TimelineProps {
   posts: Post[];
   availableTags: Tag[];
+  isTagsConfigured?: boolean;
   isLoading: boolean;
   onRefresh: () => void;
   isRefreshing?: boolean;
@@ -88,6 +89,7 @@ interface TimelineProps {
 export function Timeline({
   posts,
   availableTags,
+  isTagsConfigured = true,
   isLoading,
   onRefresh,
   isRefreshing,
@@ -457,45 +459,43 @@ export function Timeline({
             )}
           </div>
 
-          {/* セクション2: タグフィルター（複数選択可） */}
-          <div style={{ marginBottom: '16px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: 'var(--text-secondary)',
-                marginBottom: '8px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <TagIcon size={12} />
-                <span>タグ (複数選択可・いずれかを含む)</span>
+          {/* セクション2: タグフィルター（複数選択可 - タグDB設定時かつタグ存在時のみ表示） */}
+          {isTagsConfigured && availableTags.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  marginBottom: '8px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <TagIcon size={12} />
+                  <span>タグ (複数選択可・いずれかを含む)</span>
+                </div>
+                {filter.selectedTagIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter((prev) => ({ ...prev, selectedTagIds: [] }))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.7rem',
+                      padding: 0,
+                    }}
+                  >
+                    タグ全解除 ({filter.selectedTagIds.length}件選択中)
+                  </button>
+                )}
               </div>
-              {filter.selectedTagIds.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setFilter((prev) => ({ ...prev, selectedTagIds: [] }))}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--accent-primary)',
-                    cursor: 'pointer',
-                    fontSize: '0.7rem',
-                    padding: 0,
-                  }}
-                >
-                  タグ全解除 ({filter.selectedTagIds.length}件選択中)
-                </button>
-              )}
-            </div>
 
-            {/* タグ一覧（縦並びチェックリスト形式） */}
-            {availableTags.length === 0 ? (
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>利用可能なタグがありません</p>
-            ) : (
+              {/* タグ一覧（縦並びチェックリスト形式） */}
               <div
                 style={{
                   display: 'flex',
@@ -566,8 +566,8 @@ export function Timeline({
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* パネル下部フッターアクション */}
           <div

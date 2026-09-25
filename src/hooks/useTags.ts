@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Tag } from '../types';
 
 export function useTags() {
-  return useQuery<{ tags: Tag[] }>({
+  return useQuery<{ tags: Tag[]; configured?: boolean }>({
     queryKey: ['tags'],
     queryFn: async () => {
       const res = await fetch('/api/tags');

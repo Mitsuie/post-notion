@@ -14,6 +14,10 @@ tagsRouter.get('/', async (c) => {
     );
   }
 
+  if (!env.NOTION_TAGS_DATABASE_ID) {
+    return c.json({ tags: [], configured: false });
+  }
+
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
@@ -38,7 +42,7 @@ tagsRouter.get('/', async (c) => {
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'ja', { numeric: true }));
 
-    return c.json({ tags });
+    return c.json({ tags, configured: true });
   } catch (error: any) {
     console.error('Failed to fetch tags from Notion:', error);
     return c.json(

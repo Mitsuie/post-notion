@@ -4,11 +4,12 @@ import type { Tag, CreatePostInput } from '../types';
 
 interface InputBarProps {
   availableTags: Tag[];
+  isTagsConfigured?: boolean;
   onSubmit: (input: CreatePostInput) => void;
   isSubmitting?: boolean;
 }
 
-export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProps) {
+export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isSubmitting }: InputBarProps) {
   const [content, setContent] = useState('');
   const [body, setBody] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -475,161 +476,163 @@ export function InputBar({ availableTags, onSubmit, isSubmitting }: InputBarProp
         }}
       >
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* タグ選択ボタン & ポップオーバー */}
-          <div style={{ position: 'relative' }} ref={tagPickerRef}>
-            <button
-              type="button"
-              onClick={() => setShowTagPicker(!showTagPicker)}
-              style={{
-                background: showTagPicker ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                border: `1px solid ${showTagPicker ? 'var(--accent-border)' : 'var(--border-color)'}`,
-                borderRadius: 'var(--radius-sm)',
-                padding: '6px 12px',
-                color: showTagPicker ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Hash size={14} /> タグ選択
-              {selectedTags.length > 0 && (
-                <span
-                  style={{
-                    background: 'var(--accent-primary)',
-                    color: '#fff',
-                    borderRadius: 'var(--radius-full)',
-                    padding: '1px 6px',
-                    fontSize: '0.7rem',
-                    marginLeft: '2px',
-                  }}
-                >
-                  {selectedTags.length}
-                </span>
-              )}
-            </button>
-
-            {/* タグインクリメンタル検索ポップオーバー (最前面に完全固定) */}
-            {showTagPicker && (
-              <div
-                className="popover-solid"
+          {/* タグ選択ボタン & ポップオーバー (タグDB設定時かつタグ存在時のみ表示) */}
+          {isTagsConfigured && availableTags.length > 0 && (
+            <div style={{ position: 'relative' }} ref={tagPickerRef}>
+              <button
+                type="button"
+                onClick={() => setShowTagPicker(!showTagPicker)}
                 style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  left: 0,
-                  width: '320px',
-                  maxWidth: 'calc(100vw - 40px)',
-                  maxHeight: '340px',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '12px',
-                  zIndex: 100, // スタッキングコンテキスト最上位
+                  background: showTagPicker ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                  border: `1px solid ${showTagPicker ? 'var(--accent-border)' : 'var(--border-color)'}`,
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '6px 12px',
+                  color: showTagPicker ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  fontWeight: 500,
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                {/* 検索入力欄（先頭番号やキーワードでヒット） */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 10px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-color)',
-                  }}
-                >
-                  <Search size={14} style={{ color: 'var(--text-muted)' }} />
-                  <input
-                    type="text"
-                    value={tagSearchQuery}
-                    onChange={(e) => setTagSearchQuery(e.target.value)}
-                    placeholder="番号(01)やキーワードで検索..."
-                    autoFocus
+                <Hash size={14} /> タグ選択
+                {selectedTags.length > 0 && (
+                  <span
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      outline: 'none',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                      width: '100%',
+                      background: 'var(--accent-primary)',
+                      color: '#fff',
+                      borderRadius: 'var(--radius-full)',
+                      padding: '1px 6px',
+                      fontSize: '0.7rem',
+                      marginLeft: '2px',
                     }}
-                  />
-                  {tagSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setTagSearchQuery('')}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                    >
-                      <X size={13} />
-                    </button>
-                  )}
-                </div>
+                  >
+                    {selectedTags.length}
+                  </span>
+                )}
+              </button>
 
-                {/* タグ候補リスト */}
+              {/* タグインクリメンタル検索ポップオーバー (最前面に完全固定) */}
+              {showTagPicker && (
                 <div
+                  className="popover-solid"
                   style={{
-                    overflowY: 'auto',
-                    maxHeight: '240px',
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    left: 0,
+                    width: '320px',
+                    maxWidth: 'calc(100vw - 40px)',
+                    maxHeight: '340px',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '12px',
+                    zIndex: 100, // スタッキングコンテキスト最上位
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '2px',
+                    gap: '8px',
                   }}
                 >
-                  {filteredTags.length === 0 ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 8px' }}>
-                      該当するタグがありません
-                    </div>
-                  ) : (
-                    filteredTags.map((tag) => {
-                      const isSelected = selectedTags.some((t) => t.id === tag.id);
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => toggleTag(tag)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '7px 10px',
-                            borderRadius: 'var(--radius-sm)',
-                            border: 'none',
-                            background: isSelected ? 'var(--accent-light)' : 'transparent',
-                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
-                            fontSize: '0.85rem',
-                            fontWeight: isSelected ? 600 : 400,
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            transition: 'background 0.12s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isSelected) e.currentTarget.style.background = 'var(--bg-tertiary)';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isSelected) e.currentTarget.style.background = 'transparent';
-                          }}
-                        >
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {tag.name}
-                          </span>
-                          {isSelected && (
-                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-primary)', marginLeft: '6px' }}>
-                              ✓
+                  {/* 検索入力欄（先頭番号やキーワードでヒット） */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                    }}
+                  >
+                    <Search size={14} style={{ color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      value={tagSearchQuery}
+                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                      placeholder="番号(01)やキーワードで検索..."
+                      autoFocus
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.85rem',
+                        width: '100%',
+                      }}
+                    />
+                    {tagSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setTagSearchQuery('')}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* タグ候補リスト */}
+                  <div
+                    style={{
+                      overflowY: 'auto',
+                      maxHeight: '240px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px',
+                    }}
+                  >
+                    {filteredTags.length === 0 ? (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 8px' }}>
+                        該当するタグがありません
+                      </div>
+                    ) : (
+                      filteredTags.map((tag) => {
+                        const isSelected = selectedTags.some((t) => t.id === tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '7px 10px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: 'none',
+                              background: isSelected ? 'var(--accent-light)' : 'transparent',
+                              color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                              fontSize: '0.85rem',
+                              fontWeight: isSelected ? 600 : 400,
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              transition: 'background 0.12s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = 'var(--bg-tertiary)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {tag.name}
                             </span>
-                          )}
-                        </button>
-                      );
-                    })
-                  )}
+                            {isSelected && (
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-primary)', marginLeft: '6px' }}>
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* ピン留めトグルボタン */}
           <button

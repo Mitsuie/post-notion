@@ -29,7 +29,8 @@ statusRouter.get('/', async (c) => {
       },
       tagsDb: {
         connected: false,
-        error: '環境変数が未設定です',
+        configured: !!env.NOTION_TAGS_DATABASE_ID,
+        error: env.NOTION_TAGS_DATABASE_ID ? '環境変数が未設定です' : undefined,
       },
     });
   }
@@ -60,6 +61,13 @@ statusRouter.get('/', async (c) => {
       };
     })(),
     (async () => {
+      if (!env.NOTION_TAGS_DATABASE_ID) {
+        return {
+          connected: false,
+          configured: false,
+          title: 'タグDB',
+        };
+      }
       const db: any = await notion.databases.retrieve({
         database_id: env.NOTION_TAGS_DATABASE_ID,
       });
@@ -73,6 +81,7 @@ statusRouter.get('/', async (c) => {
 
       return {
         connected: true,
+        configured: true,
         title,
         idMasked: maskId(env.NOTION_TAGS_DATABASE_ID),
         tagsCount: queryRes.results.length,
@@ -124,6 +133,7 @@ statusRouter.get('/', async (c) => {
       ? tagsDbResult.value
       : {
           connected: false,
+          configured: !!env.NOTION_TAGS_DATABASE_ID,
           idMasked: maskId(env.NOTION_TAGS_DATABASE_ID),
           error: (tagsDbResult.reason as any)?.message || String(tagsDbResult.reason),
         };
@@ -137,7 +147,7 @@ statusRouter.get('/', async (c) => {
           error: (dailyReportDbResult.reason as any)?.message || String(dailyReportDbResult.reason),
         };
 
-  const isAllOk = postsDb.connected && tagsDb.connected && (dailyReportDb.connected || !env.NOTION_DAILY_REPORT_DATABASE_ID);
+  const isAllOk = postsDb.connected && (tagsDb.connected || !env.NOTION_TAGS_DATABASE_ID) && (dailyReportDb.connected || !env.NOTION_DAILY_REPORT_DATABASE_ID);
 
   return c.json({
     status: isAllOk ? 'ok' : 'degraded',

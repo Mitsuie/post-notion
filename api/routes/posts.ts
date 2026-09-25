@@ -5,18 +5,7 @@ import { getNotionClient, validateEnv } from '../notion.ts';
 
 export const postsRouter = new Hono<{ Bindings: Bindings }>();
 
-// プロパティキーの自動検出ヘルパー
-function findPropertyKey(properties: Record<string, any>, candidateNames: string[], type: string): string | undefined {
-  // 1. 完全一致（大文字小文字無視）
-  for (const name of candidateNames) {
-    const found = Object.keys(properties).find(
-      (k) => k.toLowerCase() === name.toLowerCase() && properties[k].type === type
-    );
-    if (found) return found;
-  }
-  // 2. タイプ一致の最初のもの
-  return Object.keys(properties).find((k) => properties[k].type === type);
-}
+import { findPropertyKey } from '../utils/notion.ts';
 import { parseMarkdownToNotionBlocks } from '../utils/markdownToNotion.ts';
 
 

@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Send, X, User, Loader2 } from 'lucide-react';
 import { usePostComments, useCreateComment } from '../hooks/usePostComments';
+import { formatDate, formatFullDate } from '../utils/date';
 
 interface PostCommentsProps {
   postId: string;
@@ -12,8 +13,6 @@ interface PostCommentsProps {
   showReplyForm: boolean;
   onOpenReplyForm: () => void;
   onCloseReplyForm: () => void;
-  formatDate: (isoString: string) => string;
-  formatFullDate: (isoString: string) => string;
   onCommentsCountChange?: (count: number) => void;
 }
 
@@ -28,8 +27,6 @@ export function PostComments({
   showReplyForm,
   onOpenReplyForm,
   onCloseReplyForm,
-  formatDate,
-  formatFullDate,
   onCommentsCountChange,
 }: PostCommentsProps) {
   const [replyText, setReplyText] = useState('');

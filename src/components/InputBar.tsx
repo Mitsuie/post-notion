@@ -3,6 +3,7 @@ import { Send, Pin, X, Calendar } from 'lucide-react';
 import type { Tag, CreatePostInput } from '../types';
 import { TagPicker } from './TagPicker';
 import { useMarkdownShortcuts } from '../hooks/useMarkdownShortcuts';
+import { getTodayLocalDateString } from '../utils/date';
 
 interface InputBarProps {
   availableTags: Tag[];
@@ -33,11 +34,7 @@ export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isS
     if (!trimmedTitle) return;
 
     // クライアントのローカル日付（YYYY-MM-DD）
-    const todayStr = new Intl.DateTimeFormat('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date()).replace(/\//g, '-');
+    const todayStr = getTodayLocalDateString();
 
     onSubmit({
       title: trimmedTitle,

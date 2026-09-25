@@ -4,6 +4,7 @@ import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, Che
 import type { Post, Tag } from '../types';
 import { usePostBlocks } from '../hooks/usePostBlocks';
 import { PostComments } from './PostComments';
+import { formatDate, formatFullDate } from '../utils/date';
 
 interface PostCardProps {
   post: Post;
@@ -24,33 +25,6 @@ export function PostCard({
   // 詳細展開時のみオンデマンドで本文Markdownを取得
   const { data: blocksData, isLoading: isBlocksLoading } = usePostBlocks(showDetails ? post.id : null);
 
-  // 日時フォーマット (今年: "9/23 00:45"、過去年・未来年: "2025/9/23 00:45")
-  const formatDate = (isoString: string) => {
-    try {
-      const d = new Date(isoString);
-      const now = new Date();
-      const year = d.getFullYear();
-      const month = d.getMonth() + 1;
-      const day = d.getDate();
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      if (year !== now.getFullYear()) {
-        return `${year}/${month}/${day} ${hours}:${minutes}`;
-      }
-      return `${month}/${day} ${hours}:${minutes}`;
-    } catch {
-      return isoString;
-    }
-  };
-
-  // 完全日時フォーマット (ツールチップ用: "2026/9/23 00:45:00")
-  const formatFullDate = (isoString: string) => {
-    try {
-      return new Date(isoString).toLocaleString('ja-JP');
-    } catch {
-      return isoString;
-    }
-  };
 
   // タグIDから名称を解決
   const resolvedTags = post.tags
@@ -370,8 +344,6 @@ export function PostCard({
         showReplyForm={showReplyForm}
         onOpenReplyForm={() => setShowReplyForm(true)}
         onCloseReplyForm={() => setShowReplyForm(false)}
-        formatDate={formatDate}
-        formatFullDate={formatFullDate}
         onCommentsCountChange={setCommentsCount}
       />
     </article>

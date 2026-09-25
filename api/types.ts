@@ -1,7 +1,7 @@
 export type Bindings = {
   NOTION_API_KEY: string;
   NOTION_POSTS_DATABASE_ID: string;
-  NOTION_TAGS_DATABASE_ID: string;
+  NOTION_TAGS_DATABASE_ID?: string;
   NOTION_DAILY_REPORT_DATABASE_ID?: string;
 };
 
@@ -29,6 +29,11 @@ export type PostItem = {
 export type TagItem = {
   id: string;
   name: string;
+};
+
+export type TagsResponse = {
+  tags: TagItem[];
+  configured?: boolean;
 };
 
 export type CreatePostPayload = {

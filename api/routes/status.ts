@@ -29,7 +29,8 @@ statusRouter.get('/', async (c) => {
       },
       tagsDb: {
         connected: false,
-        error: '環境変数が未設定です',
+        configured: !!env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim() !== '',
+        error: (env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim()) ? '環境変数が未設定です' : undefined,
       },
     });
   }
@@ -60,6 +61,13 @@ statusRouter.get('/', async (c) => {
       };
     })(),
     (async () => {
+      if (!env.NOTION_TAGS_DATABASE_ID || !env.NOTION_TAGS_DATABASE_ID.trim()) {
+        return {
+          connected: false,
+          configured: false,
+          title: 'タグDB',
+        };
+      }
       const db: any = await notion.databases.retrieve({
         database_id: env.NOTION_TAGS_DATABASE_ID,
       });
@@ -73,6 +81,7 @@ statusRouter.get('/', async (c) => {
 
       return {
         connected: true,
+        configured: true,
         title,
         idMasked: maskId(env.NOTION_TAGS_DATABASE_ID),
         tagsCount: queryRes.results.length,
@@ -80,11 +89,11 @@ statusRouter.get('/', async (c) => {
       };
     })(),
     (async () => {
-      if (!env.NOTION_DAILY_REPORT_DATABASE_ID) {
+      if (!env.NOTION_DAILY_REPORT_DATABASE_ID || !env.NOTION_DAILY_REPORT_DATABASE_ID.trim()) {
         return {
           connected: false,
           configured: false,
-          error: '環境変数 NOTION_DAILY_REPORT_DATABASE_ID が未設定です',
+          title: '日報DB',
         };
       }
       const db: any = await notion.databases.retrieve({
@@ -119,25 +128,29 @@ statusRouter.get('/', async (c) => {
           error: (postsDbResult.reason as any)?.message || String(postsDbResult.reason),
         };
 
+  const hasTagsDb = !!env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim() !== '';
   const tagsDb =
     tagsDbResult.status === 'fulfilled'
       ? tagsDbResult.value
       : {
           connected: false,
+          configured: hasTagsDb,
           idMasked: maskId(env.NOTION_TAGS_DATABASE_ID),
           error: (tagsDbResult.reason as any)?.message || String(tagsDbResult.reason),
         };
 
+  const hasDailyReportDb = !!env.NOTION_DAILY_REPORT_DATABASE_ID && env.NOTION_DAILY_REPORT_DATABASE_ID.trim() !== '';
   const dailyReportDb =
     dailyReportDbResult.status === 'fulfilled'
       ? dailyReportDbResult.value
       : {
           connected: false,
+          configured: hasDailyReportDb,
           idMasked: maskId(env.NOTION_DAILY_REPORT_DATABASE_ID),
           error: (dailyReportDbResult.reason as any)?.message || String(dailyReportDbResult.reason),
         };
 
-  const isAllOk = postsDb.connected && tagsDb.connected && (dailyReportDb.connected || !env.NOTION_DAILY_REPORT_DATABASE_ID);
+  const isAllOk = postsDb.connected && (tagsDb.connected || !hasTagsDb) && (dailyReportDb.connected || !hasDailyReportDb);
 
   return c.json({
     status: isAllOk ? 'ok' : 'degraded',

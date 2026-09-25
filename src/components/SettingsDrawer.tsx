@@ -41,6 +41,7 @@ interface StatusData {
   };
   tagsDb?: {
     connected: boolean;
+    configured?: boolean;
     title?: string;
     idMasked?: string;
     tagsCount?: number;
@@ -391,16 +392,16 @@ export function SettingsDrawer({
                         正常
                       </span>
                     ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: statusData.tagsDb?.configured === false ? 'var(--text-muted)' : 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
                         <AlertCircle size={11} />
-                        エラー
+                        {statusData.tagsDb?.configured === false ? '未設定 (任意)' : 'エラー'}
                       </span>
                     )}
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
                     <span>ID: {statusData.tagsDb?.idMasked || '未設定'}</span>
-                    {typeof statusData.tagsDb?.tagsCount === 'number' && (
+                    {statusData.tagsDb?.connected && typeof statusData.tagsDb?.tagsCount === 'number' && (
                       <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
                         {statusData.tagsDb.tagsCount}件のタグ登録
                       </span>
@@ -435,9 +436,9 @@ export function SettingsDrawer({
                         正常
                       </span>
                     ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: statusData.dailyReportDb?.configured === false ? 'var(--text-muted)' : 'var(--danger)', fontSize: '0.72rem', fontWeight: 500 }}>
                         <AlertCircle size={11} />
-                        {statusData.dailyReportDb?.configured === false ? '未設定' : 'エラー'}
+                        {statusData.dailyReportDb?.configured === false ? '未設定 (任意)' : 'エラー'}
                       </span>
                     )}
                   </div>

@@ -130,19 +130,19 @@ npm install
 #### (2) バックエンド用データベースの準備
 Notion 上に以下のデータベースを作成し、右上の「...」メニュー →「コネクトの追加」から、作成したインテグレーション（`post-notion`）を追加してアクセス権を付与します。
 
-1. **Posts データベース（投稿保存用）**:
+1. **Posts データベース（投稿保存用・必須）**:
    - `タイトル` (Title): タイトル / 要約
    - `作成日時` (Created Time): 自動生成
    - `作成者` (Created By): 自動生成
-   - `タグ` (Relation): タグ管理データベースへのリレーション
+   - `タグ` (Relation): タグ管理データベースへのリレーション（任意）
    - `ピン止め` (Checkbox): 上部固定フラグ
    - `コメント追加回数` (Number): コメント件数キャッシュ用
    - `DB_日報` (Relation): 日報データベースへのリレーション（任意）
    - `日報日付` (Date): 投稿日（任意）
-2. **タグ管理データベース（タグマスタ）**:
+2. **タグ管理データベース（タグマスタ・オプション / 任意）**:
    - `名前` (Title): タグ名称（例: `01_Notion`, `02_開発`, `03_読書メモ`）
    - `Posts` (Relation): Postsデータベースへの逆リレーション
-3. **日報データベース（日報自動連携用・オプション）**:
+3. **日報データベース（日報自動連携用・オプション / 任意）**:
    - `日付` (Date): 日報の日付
    - `名前` (Title): 日報タイトル
 
@@ -166,11 +166,13 @@ cp .env.example .dev.vars
 # Notion インテグレーションシークレット
 NOTION_API_KEY="ntn_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
-# 各種データベースID (32桁の英数字)
+# 投稿データベースID (必須 / 32桁の英数字)
 NOTION_POSTS_DATABASE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# タグ管理データベースID (任意 / 32桁の英数字)
 NOTION_TAGS_DATABASE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
-# 日報データベースID (日報連携機能を使用する場合)
+# 日報データベースID (任意 / 日報連携機能を使用する場合)
 NOTION_DAILY_REPORT_DATABASE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 

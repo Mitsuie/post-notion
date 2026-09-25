@@ -385,7 +385,7 @@ postsRouter.post('/', async (c) => {
     let dailyReportLinked = false;
     let dailyReportWarning: string | undefined = undefined;
 
-    if (payload.linkDailyReport !== false && env.NOTION_DAILY_REPORT_DATABASE_ID) {
+    if (payload.linkDailyReport !== false && env.NOTION_DAILY_REPORT_DATABASE_ID && env.NOTION_DAILY_REPORT_DATABASE_ID.trim()) {
       try {
         const dailyDbId = env.NOTION_DAILY_REPORT_DATABASE_ID;
         // ターゲット日付を決定（クライアント指定日付、またはAsia/Tokyoの当日）

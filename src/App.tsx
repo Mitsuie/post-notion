@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, X, Menu } from 'lucide-react';
 import { usePosts } from './hooks/usePosts';
 import { useTags } from './hooks/useTags';
+import { checkHasDraft } from './hooks/useDraft';
+import { clearCacheAndReload, reloadPage } from './utils/pwa';
 import { InputBar } from './components/InputBar';
 import { Timeline } from './components/Timeline';
 import { Logo } from './components/Logo';
@@ -94,23 +96,15 @@ export default function App() {
 
   // 再ログイン実行ハンドラ
   const handleReLogin = () => {
-    window.location.reload();
+    reloadPage();
   };
 
   // キャッシュクリア＆再ログイン実行ハンドラ
-  const handleClearCacheAndReload = async () => {
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map((r) => r.unregister()));
-    }
-    if ('caches' in window) {
-      const names = await caches.keys();
-      await Promise.all(names.map((name) => caches.delete(name)));
-    }
-    window.location.reload();
+  const handleClearCacheAndReload = () => {
+    clearCacheAndReload();
   };
 
-  const hasDraft = typeof window !== 'undefined' && !!localStorage.getItem('post-notion-draft');
+  const hasDraft = checkHasDraft();
 
   return (
     <div

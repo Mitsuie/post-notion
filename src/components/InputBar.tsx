@@ -3,6 +3,7 @@ import { Send, Pin, X, Calendar } from 'lucide-react';
 import type { Tag, CreatePostInput } from '../types';
 import { TagPicker } from './TagPicker';
 import { useMarkdownShortcuts } from '../hooks/useMarkdownShortcuts';
+import { useDraft } from '../hooks/useDraft';
 import { getTodayLocalDateString } from '../utils/date';
 
 interface InputBarProps {
@@ -22,42 +23,30 @@ export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isS
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 下書き自動管理フック
+  const { restoreDraft, saveDraft, clearDraft } = useDraft(availableTags);
+
   // 下書き（Draft）の自動復元
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('post-notion-draft');
-      if (saved) {
-        const draft = JSON.parse(saved);
-        if (draft.title && !content) setContent(draft.title);
-        if (draft.body && !body) setBody(draft.body);
-        if (typeof draft.pinned === 'boolean') setIsPinned(draft.pinned);
-        if (typeof draft.linkDailyReport === 'boolean') setLinkDailyReport(draft.linkDailyReport);
-        if (Array.isArray(draft.tagIds) && availableTags.length > 0) {
-          const matched = availableTags.filter((t) => draft.tagIds.includes(t.id));
-          setSelectedTags(matched);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, [availableTags]);
+    restoreDraft((draft, matchedTags) => {
+      if (draft.title && !content) setContent(draft.title);
+      if (draft.body && !body) setBody(draft.body);
+      if (typeof draft.pinned === 'boolean') setIsPinned(draft.pinned);
+      if (typeof draft.linkDailyReport === 'boolean') setLinkDailyReport(draft.linkDailyReport);
+      if (matchedTags.length > 0) setSelectedTags(matchedTags);
+    });
+  }, [restoreDraft, content, body]);
 
   // 下書き（Draft）の自動保存
   useEffect(() => {
-    if (content.trim() || body.trim() || selectedTags.length > 0) {
-      const draft = {
-        title: content,
-        body,
-        tagIds: selectedTags.map((t) => t.id),
-        pinned: isPinned,
-        linkDailyReport,
-        updatedAt: new Date().toISOString(),
-      };
-      localStorage.setItem('post-notion-draft', JSON.stringify(draft));
-    } else {
-      localStorage.removeItem('post-notion-draft');
-    }
-  }, [content, body, selectedTags, isPinned, linkDailyReport]);
+    saveDraft({
+      title: content,
+      body,
+      tagIds: selectedTags.map((t) => t.id),
+      pinned: isPinned,
+      linkDailyReport,
+    });
+  }, [content, body, selectedTags, isPinned, linkDailyReport, saveDraft]);
 
   // タイトル変更ハンドラ（改行はスペースに置換して禁止）
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -88,7 +77,7 @@ export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isS
     setSelectedTags([]);
     setIsPinned(false);
     // 日報紐付けは「デフォルトで適用」のため、trueを維持
-    localStorage.removeItem('post-notion-draft');
+    clearDraft();
 
     // フォーカス維持
     setTimeout(() => {

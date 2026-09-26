@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Post, CreatePostInput } from '../types';
+import { apiFetch } from '../utils/apiClient';
 
 export function usePosts() {
   const queryClient = useQueryClient();
@@ -8,11 +9,7 @@ export function usePosts() {
   const postsQuery = useQuery<{ posts: Post[] }>({
     queryKey: ['posts'],
     queryFn: async () => {
-      const res = await fetch('/api/posts');
-      if (!res.ok) {
-        throw new Error('投稿一覧の取得に失敗しました');
-      }
-      return res.json();
+      return apiFetch<{ posts: Post[] }>('/api/posts');
     },
     staleTime: 1000 * 60 * 5, // 5分間キャッシュ
   });
@@ -20,16 +17,11 @@ export function usePosts() {
   // 楽観的UI更新付きの新規投稿
   const createPostMutation = useMutation({
     mutationFn: async (input: CreatePostInput) => {
-      const res = await fetch('/api/posts', {
+      return apiFetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) {
-        const errorData = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(errorData.message || '投稿の作成に失敗しました');
-      }
-      return res.json();
     },
     // 楽観的更新: 送信直後に仮データをタイムライン先頭へ挿入
     onMutate: async (newPostInput) => {
@@ -78,15 +70,11 @@ export function usePosts() {
   // ピン留め動的トグル
   const togglePinMutation = useMutation({
     mutationFn: async ({ id, pinned }: { id: string; pinned: boolean }) => {
-      const res = await fetch(`/api/posts/${id}`, {
+      return apiFetch(`/api/posts/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pinned }),
       });
-      if (!res.ok) {
-        throw new Error('ピン留めの更新に失敗しました');
-      }
-      return res.json();
     },
     onMutate: async ({ id, pinned }) => {
       await queryClient.cancelQueries({ queryKey: ['posts'] });

@@ -13,6 +13,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { DbStatusCard } from './DbStatusCard';
+import { apiFetch } from '../utils/apiClient';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -96,11 +97,7 @@ export function SettingsDrawer({
   } = useQuery<StatusData>({
     queryKey: ['system-status'],
     queryFn: async () => {
-      const res = await fetch('/api/status');
-      if (!res.ok) {
-        throw new Error('ステータス取得に失敗しました');
-      }
-      return res.json();
+      return apiFetch<StatusData>('/api/status');
     },
     enabled: isOpen, // ドロワー展開時のみクエリ実行
     staleTime: 30 * 1000,

@@ -7,6 +7,7 @@ import { InputBar } from './components/InputBar';
 import { Timeline } from './components/Timeline';
 import { Logo } from './components/Logo';
 import { SettingsDrawer } from './components/SettingsDrawer';
+import { SessionExpiredModal } from './components/SessionExpiredModal';
 
 export default function App() {
   const queryClient = useQueryClient();
@@ -21,6 +22,7 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   const posts = postsData?.posts || [];
   const tags = tagsData?.tags || [];
@@ -41,6 +43,18 @@ export default function App() {
       themeColorMeta.setAttribute('content', theme === 'dark' ? '#0a0f1d' : '#f8fafc');
     }
   }, [theme]);
+
+  // セッション失効イベント (session-expired) のグローバル購読
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsSessionExpired(true);
+    };
+
+    window.addEventListener('session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('session-expired', handleSessionExpired);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
@@ -78,6 +92,26 @@ export default function App() {
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
+  // 再ログイン実行ハンドラ
+  const handleReLogin = () => {
+    window.location.reload();
+  };
+
+  // キャッシュクリア＆再ログイン実行ハンドラ
+  const handleClearCacheAndReload = async () => {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((r) => r.unregister()));
+    }
+    if ('caches' in window) {
+      const names = await caches.keys();
+      await Promise.all(names.map((name) => caches.delete(name)));
+    }
+    window.location.reload();
+  };
+
+  const hasDraft = typeof window !== 'undefined' && !!localStorage.getItem('post-notion-draft');
+
   return (
     <div
       style={{
@@ -90,6 +124,14 @@ export default function App() {
         minHeight: '100dvh',
       }}
     >
+      {/* セッション失効モーダル */}
+      <SessionExpiredModal
+        isOpen={isSessionExpired}
+        hasDraft={hasDraft}
+        onReLogin={handleReLogin}
+        onClearCacheAndReload={handleClearCacheAndReload}
+      />
+
       {/* エラートースト通知 */}
       {errorMessage && (
         <div

@@ -41,6 +41,16 @@ Cloudflare Pages（エッジ実行・完全無料）およびローカルNode.js
 - バックエンドの疎通診断（APIキー、Posts DB、Tags DB、日報DBの接続状況・登録件数・プロパティ確認）。
 - アプリ内キャッシュの強制クリア＆Notion最新状態再同期。
 
+### 7. Cloudflare Access 認証失効時の白画面防止 & 0秒復旧機構
+- **Service Worker Network-First**: ページ初回読み込みや PWA 起動時の HTML ナビゲーションを Network-First で処理。セッション失効時はキャッシュを先行返却せず、Cloudflare Access の認証画面へ直接誘導することで、JavaScript 構文エラーによる白画面（Blank Screen）を根絶。
+- **React 起動前インラインフェイルセーフ**: アセット通信エラーやスクリプト構文エラー、起動遅延（3.5秒）を検知した場合、React に依存しないインラインフェイルセーフ UI が浮き上がり、「再ログイン（再読み込み）」および「キャッシュ初期化」を支援。
+- **操作中セッション失効モーダル**: アプリ操作中のセッション失効（401 / 403 / HTML 返却 / CORS 遮断）を共通 `apiClient` が検知し、作業を中断させずにワンタップで再認証へ誘導。
+- **最上位 ErrorBoundary**: React コンポーネントツリー全体をエラー境界で保護し、予期せぬ描画時クラッシュをトラップ。
+
+### 8. エディタの下書き自動退避 & 復元
+- **自動ローカル保護**: 入力中のタイトル、本文、タグ、日報紐付け設定を `localStorage` へ自動同期。
+- **安全な復元**: セッション切れによる再認証後や、ブラウザ・PWA の予期せぬ終了・リロード時でも直前の入力状態を完全復元。投稿送信完了時にのみ安全にクリア。
+
 ---
 
 ## 🛠️ 技術スタック
@@ -49,6 +59,7 @@ Cloudflare Pages（エッジ実行・完全無料）およびローカルNode.js
 | :--- | :--- | :--- |
 | **フロントエンド** | React 18, TypeScript, Vite | SPAクライアント |
 | **状態・キャッシュ** | TanStack Query (React Query) v5 | 楽観的更新、非同期データキャッシュ |
+| **耐障害性・PWA** | Service Worker, CacheStorage | Network-First ナビゲーション、インラインフェイルセーフ |
 | **UI・アイコン** | Vanilla CSS, Lucide React | インダストリアルモノトーンデザイン、アイコン |
 | **BFF / API層** | Hono v4 | Web標準準拠の軽量高速APIフレームワーク |
 | **Notion連携** | `@notionhq/client`, `notion-to-md` | Notion公式SDK、ブロックMarkdown相互変換 |
@@ -65,12 +76,12 @@ Cloudflare Pages（エッジ実行・完全無料）およびローカルNode.js
 ```text
 post-notion/
 ├── src/                        # フロントエンド (React + TypeScript + Vite)
-│   ├── components/             # UIコンポーネント (Timeline, PostCard, InputBar, SettingsDrawer等)
-│   ├── hooks/                  # TanStack Query カスタムフック (usePosts, useCreatePost等)
+│   ├── components/             # UIコンポーネント (Timeline, InputBar, SessionExpiredModal, ErrorBoundary等)
+│   ├── hooks/                  # TanStack Query / カスタムフック (usePosts, useDraft等)
 │   ├── types/                  # クライアント側型定義
-│   ├── utils/                  # 日時フォーマッター、ヘルパー関数
-│   ├── App.tsx                 # アプリケーションルート
-│   └── main.tsx                # エントリーポイント
+│   ├── utils/                  # apiClient, pwa, 日時フォーマッター、ヘルパー関数
+│   ├── App.tsx                 # アプリケーションルート (セッション失効モーダル連携)
+│   └── main.tsx                # エントリーポイント (ErrorBoundary配置)
 ├── api/                        # 共通BFFロジック (Hono)
 │   ├── app.ts                  # Honoアプリケーション本体 (CORS、ルーティング定義)
 │   ├── notion.ts               # Notion SDKクライアント初期化・環境変数バリデーション
@@ -84,8 +95,8 @@ post-notion/
 │       └── [[route]].ts        # HonoアプリをPages Functionsにマウント
 ├── server/                     # 【Node.js スタンドアロン実行用】
 │   └── index.ts                # dist/静的配信 + Hono APIマウント (Port 3000)
-├── public/                     # PWAマニフェスト、アプリアイコン
-├── index.html                  # HTMLテンプレート
+├── public/                     # Service Worker (sw.js), PWAマニフェスト、アプリアイコン
+├── index.html                  # HTMLテンプレート (起動前インラインフェイルセーフUI内蔵)
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
@@ -226,6 +237,48 @@ npm run serve
 4. **環境変数の追加**:
    - `Settings` > `Environment variables` にて、`.dev.vars` に設定したキー（`NOTION_API_KEY`, `NOTION_POSTS_DATABASE_ID` 等）を `Production` および `Preview` に登録。
 5. デプロイ完了後、発行された `https://<project-name>.pages.dev` からアクセス可能になります。
+
+---
+
+## 🔐 Cloudflare Zero Trust (Access) 連携設定ガイド
+
+Post-Notion を個人専用のプライベートツールとしてセキュアに運用するため、**Cloudflare Zero Trust (Access)** によるアクセス制御を導入することを推奨します。  
+本プロジェクトでは、モバイル PWA での快適性を追求した **「GitHub OAuth 連携 + 端末生体認証 (Passkeys)」** に最適化されています。
+
+### 1. 設計思想とメリット
+- **摩擦ゼロ（0秒）ログイン**: 普段お使いのブラウザで GitHub にログイン済みであれば、［GitHub］ボタンをワンタップするだけで認証を通過します。
+- **生体認証 (Passkeys)**: お使いの GitHub アカウント側で Passkeys（Touch ID / Face ID / Windows Hello）を有効にしておくことで、端末ネイティブの生体認証をそのまま活用できます。
+- **長期セッション**: セッション期間を 1 ヶ月に設定することで、毎日の煩雑なログイン要求を排除します。
+
+---
+
+### 2. GitHub OAuth App の作成
+1. GitHub の [Settings > Developer Settings > OAuth Apps](https://github.com/settings/developers) を開きます。
+2. **「New OAuth App」** をクリック：
+   - **Application name**: `post-notion-auth`（任意）
+   - **Homepage URL**: `https://<your-team-name>.cloudflareaccess.com`
+   - **Authorization callback URL**: `https://<your-team-name>.cloudflareaccess.com/cdn-cgi/access/callback`
+3. 作成後、**「Client ID」** を控え、**「Generate a new client secret」** から **「Client Secret」** を発行・控えます。
+
+---
+
+### 3. Cloudflare Zero Trust への IdP 登録
+1. [Cloudflare Zero Trust ダッシュボード](https://one.dash.cloudflare.com/) にアクセスします。
+2. 左メニューの **`Integrations`（統合） > `Identity providers`（ID プロバイダー）** を開きます。
+3. **「Add provider」** をクリックし、**「GitHub」** を選択します。
+4. 控えた `Client ID` と `Client Secret` を入力し、**「Save」** をクリックします。
+
+---
+
+### 4. Access Application の設定
+1. 左メニューの **`Access controls` > `Applications`** を開き、デプロイした Pages アプリケーションを選択（または新規追加）します。
+2. **Overview / Policies**:
+   - ポリシーのルール設定にて、**Action**: `Allow`、**Selector**: `Emails` を選択し、許可するご自身のメールアドレスを入力します。
+3. **Session Duration**:
+   - アプリケーション設定の Session Duration を **`1 month`**（または `7 days`）に設定します。
+4. **CORS Settings (OPTIONS リクエストの許可)**:
+   - アプリケーション設定の **CORS Settings** を有効化します。
+   - API へのプリフライト通信（`OPTIONS`）が Access によって未認証ブロックされるのを防ぎます。
 
 ---
 

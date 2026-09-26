@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { PostComment, CreateCommentInput, Post } from '../types';
+import { apiFetch } from '../utils/apiClient';
 
 export function usePostComments(postId: string | null) {
   const queryClient = useQueryClient();
@@ -10,12 +11,9 @@ export function usePostComments(postId: string | null) {
       if (!postId) {
         throw new Error('Post ID is required');
       }
-      const res = await fetch(`/api/posts/${postId}/comments`);
-      if (!res.ok) {
-        const errorData: any = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'コメントの取得に失敗しました');
-      }
-      const data: { comments: PostComment[]; commentsCount?: number } = await res.json();
+      const data = await apiFetch<{ comments: PostComment[]; commentsCount?: number }>(
+        `/api/posts/${postId}/comments`
+      );
 
       // ハイブリッド補正: 取得した最新の実数カウントをタイムライン投稿キャッシュに即時反映
       if (typeof data.commentsCount === 'number') {
@@ -42,18 +40,14 @@ export function useCreateComment(postId: string) {
 
   return useMutation({
     mutationFn: async (input: CreateCommentInput) => {
-      const res = await fetch(`/api/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
-      });
-
-      if (!res.ok) {
-        const errorData: any = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'コメントの投稿に失敗しました');
-      }
-
-      return res.json() as Promise<{ comment: PostComment; commentsCount?: number }>;
+      return apiFetch<{ comment: PostComment; commentsCount?: number }>(
+        `/api/posts/${postId}/comments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        }
+      );
     },
     onMutate: async (newCommentInput) => {
       await queryClient.cancelQueries({ queryKey: ['post-comments', postId] });

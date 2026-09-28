@@ -32,6 +32,12 @@ statusRouter.get('/', async (c) => {
         configured: !!env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim() !== '',
         error: (env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim()) ? '環境変数が未設定です' : undefined,
       },
+      dailyReportDb: {
+        connected: false,
+        configured: !!env.NOTION_DAILY_REPORT_DATABASE_ID && env.NOTION_DAILY_REPORT_DATABASE_ID.trim() !== '',
+        title: '日報DB',
+        error: (env.NOTION_DAILY_REPORT_DATABASE_ID && env.NOTION_DAILY_REPORT_DATABASE_ID.trim()) ? '環境変数が未設定です' : undefined,
+      },
     });
   }
 

@@ -96,11 +96,11 @@ async function testNotion() {
     }
   }
 
-  // 3. 日報データベース (DB_日報) のテスト
-  console.log('\n--- 3. 日報データベース (DB_日報) の接続テスト ---');
+  // 3. 日報データベース (DB_日報) のテスト (任意)
+  console.log('\n--- 3. 日報データベース (DB_日報) の接続テスト (任意) ---');
   const dailyDbId = env.NOTION_DAILY_REPORT_DATABASE_ID;
   if (!dailyDbId) {
-    console.log('⚠️ NOTION_DAILY_REPORT_DATABASE_ID が未設定です。');
+    console.log('⚠️ NOTION_DAILY_REPORT_DATABASE_ID が未設定です（日報連携機能は無効となります）。');
   } else {
     try {
       const dailyDb = await notion.databases.retrieve({ database_id: dailyDbId });

@@ -18,7 +18,7 @@ export default function App() {
   const queryClient = useQueryClient();
   const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
   const { data: tagsData } = useTags();
-  const { isDailyReportConfigured } = useSystemStatus();
+  const { isDailyReportConfigured, isTagsConfigured: isSystemTagsConfigured } = useSystemStatus();
   const { preferences, setDefaultPinned, setDefaultDailyReport, setRequireTag } = useUserPreferences();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
@@ -33,7 +33,8 @@ export default function App() {
 
   const posts = postsData?.posts || [];
   const tags = tagsData?.tags || [];
-  const isTagsConfigured = tagsData?.configured !== false;
+  // タグDBが明示的に設定されている場合のみ有効判定（安全サイド）
+  const isTagsConfigured = tagsData ? tagsData.configured === true : Boolean(isSystemTagsConfigured);
 
   // テーマ変更を HTML data-theme 属性、localStorage、favicon、theme-color meta に同期
   useEffect(() => {

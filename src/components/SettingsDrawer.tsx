@@ -110,8 +110,8 @@ export function SettingsDrawer({
   onSetDefaultPinned,
   onSetDefaultDailyReport,
   onSetRequireTag,
-  isDailyReportConfigured = true,
-  isTagsConfigured = true,
+  isDailyReportConfigured = false,
+  isTagsConfigured = false,
 }: SettingsDrawerProps) {
   // ESCキーでドロワーを閉じる
   useEffect(() => {
@@ -387,7 +387,7 @@ export function SettingsDrawer({
                   background: 'var(--bg-tertiary)',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--border-color)',
-                  opacity: isTagsConfigured ? 1 : 0.6,
+                  opacity: isTagsConfigured ? 1 : 0.5,
                 }}
               >
                 <div>
@@ -404,11 +404,15 @@ export function SettingsDrawer({
                   checked={preferences.requireTag && isTagsConfigured}
                   disabled={!isTagsConfigured}
                   activeColor="var(--accent-primary)"
-                  onChange={onSetRequireTag}
+                  onChange={(val) => {
+                    if (isTagsConfigured) {
+                      onSetRequireTag(val);
+                    }
+                  }}
                   ariaLabel="タグ選択の必須化設定"
                   title={
                     !isTagsConfigured
-                      ? 'タグDB未登録のため無効'
+                      ? 'タグDB未登録のため変更できません'
                       : preferences.requireTag
                       ? '現在: 必須 (クリックで任意に変更)'
                       : '現在: 任意 (クリックで必須に変更)'

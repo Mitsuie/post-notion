@@ -17,9 +17,9 @@ export function useSystemStatus(options?: UseSystemStatusOptions) {
     enabled: options?.enabled ?? true,
   });
 
-  // dailyReportDb が明示的に configured: true の場合のみ有効と判定
+  // dailyReportDb / tagsDb が明示的に configured: true の場合のみ有効と判定
   const isDailyReportConfigured = !!query.data?.dailyReportDb?.configured;
-  const isTagsConfigured = query.data?.tagsDb?.configured !== false;
+  const isTagsConfigured = !!query.data?.tagsDb?.configured;
 
   return {
     ...query,

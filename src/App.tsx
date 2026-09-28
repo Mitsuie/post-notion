@@ -11,13 +11,15 @@ import { Logo } from './components/Logo';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
 import { useSystemStatus } from './hooks/useSystemStatus';
+import { useUserPreferences } from './hooks/useUserPreferences';
 import type { CreatePostInput } from './types';
 
 export default function App() {
   const queryClient = useQueryClient();
   const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
   const { data: tagsData } = useTags();
-  const { isDailyReportConfigured } = useSystemStatus();
+  const { isDailyReportConfigured, isTagsConfigured: isSystemTagsConfigured } = useSystemStatus();
+  const { preferences, setDefaultPinned, setDefaultDailyReport, setRequireTag } = useUserPreferences();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -31,7 +33,8 @@ export default function App() {
 
   const posts = postsData?.posts || [];
   const tags = tagsData?.tags || [];
-  const isTagsConfigured = tagsData?.configured !== false;
+  // タグDBが明示的に設定されている場合のみ有効判定（安全サイド）
+  const isTagsConfigured = tagsData ? tagsData.configured === true : Boolean(isSystemTagsConfigured);
 
   // テーマ変更を HTML data-theme 属性、localStorage、favicon、theme-color meta に同期
   useEffect(() => {
@@ -220,6 +223,12 @@ export default function App() {
         onToggleTheme={toggleTheme}
         onRefreshAll={handleRefresh}
         isRefreshingAll={isRefreshing}
+        preferences={preferences}
+        onSetDefaultPinned={setDefaultPinned}
+        onSetDefaultDailyReport={setDefaultDailyReport}
+        onSetRequireTag={setRequireTag}
+        isDailyReportConfigured={isDailyReportConfigured}
+        isTagsConfigured={isTagsConfigured}
       />
 
       {/* メインコンテンツ */}
@@ -229,6 +238,9 @@ export default function App() {
           availableTags={tags}
           isTagsConfigured={isTagsConfigured}
           isDailyReportConfigured={isDailyReportConfigured}
+          defaultPinned={preferences.defaultPinned}
+          defaultDailyReport={preferences.defaultDailyReport}
+          requireTag={preferences.requireTag}
           onSubmit={handlePostSubmit}
           isSubmitting={isCreating}
         />

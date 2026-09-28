@@ -10,9 +10,79 @@ import {
   Info,
   ShieldCheck,
   Calendar,
+  Pin,
+  Hash,
 } from 'lucide-react';
 import { DbStatusCard } from './DbStatusCard';
 import { useSystemStatus } from '../hooks/useSystemStatus';
+import type { UserPreferences } from '../hooks/useUserPreferences';
+
+// 視認性と操作性に優れたiOSスタイルのトグルスイッチ
+interface ToggleSwitchProps {
+  checked: boolean;
+  disabled?: boolean;
+  activeColor: string;
+  onChange: (checked: boolean) => void;
+  title?: string;
+  ariaLabel: string;
+  theme: 'light' | 'dark';
+}
+
+function ToggleSwitch({
+  checked,
+  disabled = false,
+  activeColor,
+  onChange,
+  title,
+  ariaLabel,
+  theme,
+}: ToggleSwitchProps) {
+  const offTrackColor = theme === 'dark' ? '#334155' : '#cbd5e1';
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      title={title}
+      onClick={() => !disabled && onChange(!checked)}
+      style={{
+        position: 'relative',
+        width: '44px',
+        height: '24px',
+        borderRadius: '12px',
+        padding: 0,
+        border: 'none',
+        backgroundColor: checked && !disabled ? activeColor : offTrackColor,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.45 : 1,
+        transition: 'background-color 0.2s ease, opacity 0.15s ease',
+        outline: 'none',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: '2px',
+          left: '2px',
+          width: '20px',
+          height: '20px',
+          borderRadius: '50%',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1)',
+          transform: checked && !disabled ? 'translateX(20px)' : 'translateX(0)',
+          transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          display: 'block',
+        }}
+      />
+    </button>
+  );
+}
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -21,6 +91,12 @@ interface SettingsDrawerProps {
   onToggleTheme: () => void;
   onRefreshAll: () => Promise<void>;
   isRefreshingAll: boolean;
+  preferences: UserPreferences;
+  onSetDefaultPinned: (val: boolean) => void;
+  onSetDefaultDailyReport: (val: boolean) => void;
+  onSetRequireTag: (val: boolean) => void;
+  isDailyReportConfigured?: boolean;
+  isTagsConfigured?: boolean;
 }
 
 export function SettingsDrawer({
@@ -30,6 +106,12 @@ export function SettingsDrawer({
   onToggleTheme,
   onRefreshAll,
   isRefreshingAll,
+  preferences,
+  onSetDefaultPinned,
+  onSetDefaultDailyReport,
+  onSetRequireTag,
+  isDailyReportConfigured = false,
+  isTagsConfigured = false,
 }: SettingsDrawerProps) {
   // ESCキーでドロワーを閉じる
   useEffect(() => {
@@ -217,7 +299,131 @@ export function SettingsDrawer({
             </div>
           </section>
 
-          {/* セクション2: Notion 接続状況 */}
+          {/* セクション2: 投稿デフォルト設定 */}
+          <section>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+              投稿デフォルト設定 (Post Preferences)
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* ピン留めデフォルト設定 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <Pin size={14} style={{ color: 'var(--pinned-color)' }} />
+                    <span>ピン留めのデフォルト</span>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    新規作成時の初期ピン留め状態
+                  </div>
+                </div>
+                {/* iOS スタイル トグルスイッチ */}
+                <ToggleSwitch
+                  checked={preferences.defaultPinned}
+                  activeColor="#f59e0b"
+                  onChange={onSetDefaultPinned}
+                  ariaLabel="ピン留めのデフォルト設定"
+                  title={preferences.defaultPinned ? '現在: ON (クリックでOFF)' : '現在: OFF (クリックでON)'}
+                  theme={theme}
+                />
+              </div>
+
+              {/* 日報連携デフォルト設定 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  opacity: isDailyReportConfigured ? 1 : 0.6,
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <Calendar size={14} style={{ color: 'var(--accent-primary)' }} />
+                    <span>日報連携のデフォルト</span>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {isDailyReportConfigured ? '当日の日報ページへの自動連携' : '日報DB未登録のため無効'}
+                  </div>
+                </div>
+                {/* iOS スタイル トグルスイッチ */}
+                <ToggleSwitch
+                  checked={preferences.defaultDailyReport && isDailyReportConfigured}
+                  disabled={!isDailyReportConfigured}
+                  activeColor="var(--accent-primary)"
+                  onChange={onSetDefaultDailyReport}
+                  ariaLabel="日報連携のデフォルト設定"
+                  title={
+                    !isDailyReportConfigured
+                      ? '日報DB未登録のため無効'
+                      : preferences.defaultDailyReport
+                      ? '現在: ON (クリックでOFF)'
+                      : '現在: OFF (クリックでON)'
+                  }
+                  theme={theme}
+                />
+              </div>
+
+              {/* タグ選択の必須化設定 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  opacity: isTagsConfigured ? 1 : 0.5,
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <Hash size={14} style={{ color: 'var(--accent-primary)' }} />
+                    <span>タグ選択の必須化</span>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {isTagsConfigured ? '投稿時に1つ以上のタグ選択を必須にする' : 'タグDB未登録のため無効'}
+                  </div>
+                </div>
+                {/* iOS スタイル トグルスイッチ */}
+                <ToggleSwitch
+                  checked={preferences.requireTag && isTagsConfigured}
+                  disabled={!isTagsConfigured}
+                  activeColor="var(--accent-primary)"
+                  onChange={(val) => {
+                    if (isTagsConfigured) {
+                      onSetRequireTag(val);
+                    }
+                  }}
+                  ariaLabel="タグ選択の必須化設定"
+                  title={
+                    !isTagsConfigured
+                      ? 'タグDB未登録のため変更できません'
+                      : preferences.requireTag
+                      ? '現在: 必須 (クリックで任意に変更)'
+                      : '現在: 任意 (クリックで必須に変更)'
+                  }
+                  theme={theme}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* セクション3: Notion 接続状況 */}
           <section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -341,7 +547,7 @@ export function SettingsDrawer({
             )}
           </section>
 
-          {/* セクション3: データ同期アクション */}
+          {/* セクション4: データ同期アクション */}
           <section>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
               データ同期 (Sync)
@@ -374,7 +580,7 @@ export function SettingsDrawer({
             </button>
           </section>
 
-          {/* セクション4: アプリ情報 & 操作ヒント */}
+          {/* セクション5: アプリ情報 & 操作ヒント */}
           <section style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
               <Command size={14} style={{ color: 'var(--accent-primary)' }} />
@@ -403,7 +609,7 @@ export function SettingsDrawer({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '16px' }}>
               <Info size={12} />
-              <span>post-notion v1.0.0 • Cloudflare Pages + Notion API</span>
+              <span>post-notion v1.0.1 • Cloudflare Pages + Notion API</span>
             </div>
           </section>
 

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Bindings } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
+import { filterUsedPostsProperties } from '../utils/notion.ts';
 
 export const statusRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -50,7 +51,7 @@ statusRouter.get('/', async (c) => {
         database_id: env.NOTION_POSTS_DATABASE_ID,
       });
       const title = db.title?.map((t: any) => t.plain_text).join('') || 'ポストDB';
-      const properties = Object.keys(db.properties || {});
+      const properties = filterUsedPostsProperties(db.properties || {});
 
       // 簡易疎通確認（クエリ実行の成否チェック）
       await notion.databases.query({

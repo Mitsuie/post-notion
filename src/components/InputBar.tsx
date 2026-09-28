@@ -12,6 +12,7 @@ interface InputBarProps {
   isDailyReportConfigured?: boolean;
   defaultPinned?: boolean;
   defaultDailyReport?: boolean;
+  requireTag?: boolean;
   onSubmit: (input: CreatePostInput) => void;
   isSubmitting?: boolean;
 }
@@ -22,6 +23,7 @@ export function InputBar({
   isDailyReportConfigured = true,
   defaultPinned = false,
   defaultDailyReport = true,
+  requireTag = false,
   onSubmit,
   isSubmitting,
 }: InputBarProps) {
@@ -30,6 +32,12 @@ export function InputBar({
   const [isPinned, setIsPinned] = useState(defaultPinned);
   const [linkDailyReport, setLinkDailyReport] = useState(isDailyReportConfigured && defaultDailyReport);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+
+  // タグ選択の必須化判定（タグDB設定済みかつ登録タグが存在する場合のみ有効）
+  const isTagRequired = Boolean(requireTag && isTagsConfigured && availableTags.length > 0);
+  const isTitleEmpty = !content.trim();
+  const isTagMissing = isTagRequired && selectedTags.length === 0;
+  const isSubmitDisabled = isTitleEmpty || isTagMissing || Boolean(isSubmitting);
 
   // 入力が空（下書き入力前または送信後）の場合に設定変更をリアルタイム同期
   const isCleanInput = !content.trim() && !body.trim() && selectedTags.length === 0;
@@ -94,6 +102,7 @@ export function InputBar({
   const handleSend = () => {
     const trimmedTitle = content.trim();
     if (!trimmedTitle) return;
+    if (isTagRequired && selectedTags.length === 0) return;
 
     // クライアントのローカル日付（YYYY-MM-DD）
     const todayStr = getTodayLocalDateString();
@@ -300,6 +309,7 @@ export function InputBar({
               availableTags={availableTags}
               selectedTags={selectedTags}
               onToggleTag={toggleTag}
+              isRequired={isTagRequired}
             />
           )}
 
@@ -358,10 +368,10 @@ export function InputBar({
         <button
           type="button"
           onClick={handleSend}
-          disabled={!content.trim() || isSubmitting}
+          disabled={isSubmitDisabled}
           style={{
-            background: content.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-            color: content.trim() ? '#ffffff' : 'var(--text-muted)',
+            background: !isSubmitDisabled ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+            color: !isSubmitDisabled ? '#ffffff' : 'var(--text-muted)',
             border: 'none',
             borderRadius: 'var(--radius-md)',
             padding: '8px 18px',
@@ -370,10 +380,19 @@ export function InputBar({
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            cursor: content.trim() ? 'pointer' : 'not-allowed',
+            cursor: !isSubmitDisabled ? 'pointer' : 'not-allowed',
             transition: 'all 0.15s ease',
-            boxShadow: content.trim() ? '0 2px 8px rgba(79, 70, 229, 0.35)' : 'none',
+            boxShadow: !isSubmitDisabled ? '0 2px 8px rgba(79, 70, 229, 0.35)' : 'none',
           }}
+          title={
+            isSubmitting
+              ? '投稿中...'
+              : isTitleEmpty
+              ? 'タイトルを入力してください (Cmd/Ctrl + Enter)'
+              : isTagMissing
+              ? 'タグを1つ以上選択してください'
+              : 'Notionへ投稿 (Cmd/Ctrl + Enter)'
+          }
         >
           <Send size={14} /> 投稿
         </button>

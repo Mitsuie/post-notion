@@ -6,12 +6,13 @@ interface TagPickerProps {
   availableTags: Tag[];
   selectedTags: Tag[];
   onToggleTag: (tag: Tag) => void;
+  isRequired?: boolean;
 }
 
 /**
  * タグ選択ボタンおよびインクリメンタル検索ポップオーバー
  */
-export function TagPicker({ availableTags, selectedTags, onToggleTag }: TagPickerProps) {
+export function TagPicker({ availableTags, selectedTags, onToggleTag, isRequired = false }: TagPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -41,6 +42,7 @@ export function TagPicker({ availableTags, selectedTags, onToggleTag }: TagPicke
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        title={isRequired && selectedTags.length === 0 ? 'タグ選択（必須）' : 'タグ選択'}
         style={{
           background: isOpen ? 'var(--accent-light)' : 'var(--bg-tertiary)',
           border: `1px solid ${isOpen ? 'var(--accent-border)' : 'var(--border-color)'}`,
@@ -56,7 +58,22 @@ export function TagPicker({ availableTags, selectedTags, onToggleTag }: TagPicke
           transition: 'all 0.15s ease',
         }}
       >
-        <Hash size={14} /> タグ選択
+        <Hash size={14} />
+        <span>タグ選択</span>
+        {isRequired && selectedTags.length === 0 && (
+          <span
+            style={{
+              color: 'var(--danger)',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              lineHeight: 1,
+              marginLeft: '-1px',
+            }}
+            title="タグの選択が必須です"
+          >
+            *
+          </span>
+        )}
         {selectedTags.length > 0 && (
           <span
             style={{

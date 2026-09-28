@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Calendar,
   Pin,
+  Hash,
 } from 'lucide-react';
 import { DbStatusCard } from './DbStatusCard';
 import { useSystemStatus } from '../hooks/useSystemStatus';
@@ -93,7 +94,9 @@ interface SettingsDrawerProps {
   preferences: UserPreferences;
   onSetDefaultPinned: (val: boolean) => void;
   onSetDefaultDailyReport: (val: boolean) => void;
+  onSetRequireTag: (val: boolean) => void;
   isDailyReportConfigured?: boolean;
+  isTagsConfigured?: boolean;
 }
 
 export function SettingsDrawer({
@@ -106,7 +109,9 @@ export function SettingsDrawer({
   preferences,
   onSetDefaultPinned,
   onSetDefaultDailyReport,
+  onSetRequireTag,
   isDailyReportConfigured = true,
+  isTagsConfigured = true,
 }: SettingsDrawerProps) {
   // ESCキーでドロワーを閉じる
   useEffect(() => {
@@ -367,6 +372,46 @@ export function SettingsDrawer({
                       : preferences.defaultDailyReport
                       ? '現在: ON (クリックでOFF)'
                       : '現在: OFF (クリックでON)'
+                  }
+                  theme={theme}
+                />
+              </div>
+
+              {/* タグ選択の必須化設定 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  opacity: isTagsConfigured ? 1 : 0.6,
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <Hash size={14} style={{ color: 'var(--accent-primary)' }} />
+                    <span>タグ選択の必須化</span>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {isTagsConfigured ? '投稿時に1つ以上のタグ選択を必須にする' : 'タグDB未登録のため無効'}
+                  </div>
+                </div>
+                {/* iOS スタイル トグルスイッチ */}
+                <ToggleSwitch
+                  checked={preferences.requireTag && isTagsConfigured}
+                  disabled={!isTagsConfigured}
+                  activeColor="var(--accent-primary)"
+                  onChange={onSetRequireTag}
+                  ariaLabel="タグ選択の必須化設定"
+                  title={
+                    !isTagsConfigured
+                      ? 'タグDB未登録のため無効'
+                      : preferences.requireTag
+                      ? '現在: 必須 (クリックで任意に変更)'
+                      : '現在: 任意 (クリックで必須に変更)'
                   }
                   theme={theme}
                 />

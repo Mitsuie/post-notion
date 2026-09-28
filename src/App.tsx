@@ -19,7 +19,7 @@ export default function App() {
   const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
   const { data: tagsData } = useTags();
   const { isDailyReportConfigured } = useSystemStatus();
-  const { preferences, setDefaultPinned, setDefaultDailyReport } = useUserPreferences();
+  const { preferences, setDefaultPinned, setDefaultDailyReport, setRequireTag } = useUserPreferences();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -225,7 +225,9 @@ export default function App() {
         preferences={preferences}
         onSetDefaultPinned={setDefaultPinned}
         onSetDefaultDailyReport={setDefaultDailyReport}
+        onSetRequireTag={setRequireTag}
         isDailyReportConfigured={isDailyReportConfigured}
+        isTagsConfigured={isTagsConfigured}
       />
 
       {/* メインコンテンツ */}
@@ -237,6 +239,7 @@ export default function App() {
           isDailyReportConfigured={isDailyReportConfigured}
           defaultPinned={preferences.defaultPinned}
           defaultDailyReport={preferences.defaultDailyReport}
+          requireTag={preferences.requireTag}
           onSubmit={handlePostSubmit}
           isSubmitting={isCreating}
         />

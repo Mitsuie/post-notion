@@ -10,6 +10,8 @@ interface InputBarProps {
   availableTags: Tag[];
   isTagsConfigured?: boolean;
   isDailyReportConfigured?: boolean;
+  defaultPinned?: boolean;
+  defaultDailyReport?: boolean;
   onSubmit: (input: CreatePostInput) => void;
   isSubmitting?: boolean;
 }
@@ -18,21 +20,33 @@ export function InputBar({
   availableTags,
   isTagsConfigured = true,
   isDailyReportConfigured = true,
+  defaultPinned = false,
+  defaultDailyReport = true,
   onSubmit,
   isSubmitting,
 }: InputBarProps) {
   const [content, setContent] = useState('');
   const [body, setBody] = useState('');
-  const [isPinned, setIsPinned] = useState(false);
-  const [linkDailyReport, setLinkDailyReport] = useState(isDailyReportConfigured);
+  const [isPinned, setIsPinned] = useState(defaultPinned);
+  const [linkDailyReport, setLinkDailyReport] = useState(isDailyReportConfigured && defaultDailyReport);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
 
-  // 日報DBが未設定の場合はリンクを自動OFFに同期
+  // 入力が空（下書き入力前または送信後）の場合に設定変更をリアルタイム同期
+  const isCleanInput = !content.trim() && !body.trim() && selectedTags.length === 0;
+
+  useEffect(() => {
+    if (isCleanInput) {
+      setIsPinned(defaultPinned);
+    }
+  }, [defaultPinned, isCleanInput]);
+
   useEffect(() => {
     if (!isDailyReportConfigured) {
       setLinkDailyReport(false);
+    } else if (isCleanInput) {
+      setLinkDailyReport(defaultDailyReport);
     }
-  }, [isDailyReportConfigured]);
+  }, [isDailyReportConfigured, defaultDailyReport, isCleanInput]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -45,13 +59,19 @@ export function InputBar({
     restoreDraft((draft, matchedTags) => {
       if (draft.title && !content) setContent(draft.title);
       if (draft.body && !body) setBody(draft.body);
-      if (typeof draft.pinned === 'boolean') setIsPinned(draft.pinned);
+      if (typeof draft.pinned === 'boolean') {
+        setIsPinned(draft.pinned);
+      } else {
+        setIsPinned(defaultPinned);
+      }
       if (typeof draft.linkDailyReport === 'boolean') {
         setLinkDailyReport(isDailyReportConfigured ? draft.linkDailyReport : false);
+      } else {
+        setLinkDailyReport(isDailyReportConfigured ? defaultDailyReport : false);
       }
       if (matchedTags.length > 0) setSelectedTags(matchedTags);
     });
-  }, [restoreDraft, content, body, isDailyReportConfigured]);
+  }, [restoreDraft, content, body, isDailyReportConfigured, defaultPinned, defaultDailyReport]);
 
   // 下書き（Draft）の自動保存
   useEffect(() => {
@@ -91,8 +111,8 @@ export function InputBar({
     setContent('');
     setBody('');
     setSelectedTags([]);
-    setIsPinned(false);
-    // 日報紐付けは「デフォルトで適用」のため、trueを維持
+    setIsPinned(defaultPinned);
+    setLinkDailyReport(isDailyReportConfigured ? defaultDailyReport : false);
     clearDraft();
 
     // フォーカス維持

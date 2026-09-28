@@ -11,6 +11,7 @@ import { Logo } from './components/Logo';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
 import { useSystemStatus } from './hooks/useSystemStatus';
+import { useUserPreferences } from './hooks/useUserPreferences';
 import type { CreatePostInput } from './types';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
   const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
   const { data: tagsData } = useTags();
   const { isDailyReportConfigured } = useSystemStatus();
+  const { preferences, setDefaultPinned, setDefaultDailyReport } = useUserPreferences();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -220,6 +222,10 @@ export default function App() {
         onToggleTheme={toggleTheme}
         onRefreshAll={handleRefresh}
         isRefreshingAll={isRefreshing}
+        preferences={preferences}
+        onSetDefaultPinned={setDefaultPinned}
+        onSetDefaultDailyReport={setDefaultDailyReport}
+        isDailyReportConfigured={isDailyReportConfigured}
       />
 
       {/* メインコンテンツ */}
@@ -229,6 +235,8 @@ export default function App() {
           availableTags={tags}
           isTagsConfigured={isTagsConfigured}
           isDailyReportConfigured={isDailyReportConfigured}
+          defaultPinned={preferences.defaultPinned}
+          defaultDailyReport={preferences.defaultDailyReport}
           onSubmit={handlePostSubmit}
           isSubmitting={isCreating}
         />

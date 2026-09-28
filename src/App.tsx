@@ -10,11 +10,14 @@ import { Timeline } from './components/Timeline';
 import { Logo } from './components/Logo';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
+import { useSystemStatus } from './hooks/useSystemStatus';
+import type { CreatePostInput } from './types';
 
 export default function App() {
   const queryClient = useQueryClient();
   const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
   const { data: tagsData } = useTags();
+  const { isDailyReportConfigured } = useSystemStatus();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -63,7 +66,7 @@ export default function App() {
   };
 
   // 投稿送信ハンドラ
-  const handlePostSubmit = (input: { title: string; tagIds?: string[]; pinned?: boolean }) => {
+  const handlePostSubmit = (input: CreatePostInput) => {
     createPost(input, {
       onError: (err: any) => {
         setErrorMessage(err.message || '投稿の送信に失敗しました');
@@ -89,7 +92,7 @@ export default function App() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['posts'] }),
       queryClient.invalidateQueries({ queryKey: ['tags'] }),
-      queryClient.invalidateQueries({ queryKey: ['status'] }),
+      queryClient.invalidateQueries({ queryKey: ['system-status'] }),
     ]);
     setTimeout(() => setIsRefreshing(false), 500);
   };
@@ -225,6 +228,7 @@ export default function App() {
         <InputBar
           availableTags={tags}
           isTagsConfigured={isTagsConfigured}
+          isDailyReportConfigured={isDailyReportConfigured}
           onSubmit={handlePostSubmit}
           isSubmitting={isCreating}
         />

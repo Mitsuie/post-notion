@@ -87,7 +87,7 @@ export function DbStatusCard({
         </div>
       )}
 
-      {error && (
+      {error && configured !== false && (
         <p style={{ color: 'var(--danger)', fontSize: '0.72rem', marginTop: '4px' }}>
           {error}
         </p>

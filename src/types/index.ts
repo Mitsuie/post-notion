@@ -52,3 +52,36 @@ export interface CreateCommentInput {
   discussionId?: string;
 }
 
+export interface StatusData {
+  status: 'ok' | 'degraded' | 'error';
+  timestamp: string;
+  environment?: {
+    configured: boolean;
+    notionApiKeyMasked?: string;
+    missing?: string[];
+  };
+  postsDb?: {
+    connected: boolean;
+    title?: string;
+    idMasked?: string;
+    properties?: string[];
+    error?: string;
+  };
+  tagsDb?: {
+    connected: boolean;
+    configured?: boolean;
+    title?: string;
+    idMasked?: string;
+    tagsCount?: number;
+    error?: string;
+  };
+  dailyReportDb?: {
+    connected: boolean;
+    configured?: boolean;
+    title?: string;
+    idMasked?: string;
+    properties?: string[];
+    error?: string;
+  };
+}
+

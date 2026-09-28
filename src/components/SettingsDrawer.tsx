@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   X,
   Sun,
@@ -13,7 +12,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { DbStatusCard } from './DbStatusCard';
-import { apiFetch } from '../utils/apiClient';
+import { useSystemStatus } from '../hooks/useSystemStatus';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -22,39 +21,6 @@ interface SettingsDrawerProps {
   onToggleTheme: () => void;
   onRefreshAll: () => Promise<void>;
   isRefreshingAll: boolean;
-}
-
-interface StatusData {
-  status: 'ok' | 'degraded' | 'error';
-  timestamp: string;
-  environment?: {
-    configured: boolean;
-    notionApiKeyMasked?: string;
-    missing?: string[];
-  };
-  postsDb?: {
-    connected: boolean;
-    title?: string;
-    idMasked?: string;
-    properties?: string[];
-    error?: string;
-  };
-  tagsDb?: {
-    connected: boolean;
-    configured?: boolean;
-    title?: string;
-    idMasked?: string;
-    tagsCount?: number;
-    error?: string;
-  };
-  dailyReportDb?: {
-    connected: boolean;
-    configured?: boolean;
-    title?: string;
-    idMasked?: string;
-    properties?: string[];
-    error?: string;
-  };
 }
 
 export function SettingsDrawer({
@@ -90,18 +56,11 @@ export function SettingsDrawer({
 
   // Notion接続状況の診断データ取得
   const {
-    data: statusData,
+    statusData,
     isLoading: isStatusLoading,
     isRefetching: isStatusRefetching,
     refetch: refetchStatus,
-  } = useQuery<StatusData>({
-    queryKey: ['system-status'],
-    queryFn: async () => {
-      return apiFetch<StatusData>('/api/status');
-    },
-    enabled: isOpen, // ドロワー展開時のみクエリ実行
-    staleTime: 30 * 1000,
-  });
+  } = useSystemStatus({ enabled: isOpen });
 
   if (!isOpen) return null;
 
@@ -323,7 +282,7 @@ export function SettingsDrawer({
                   title={statusData.tagsDb?.title || 'タグDB'}
                   icon={<Database size={13} style={{ color: '#10b981' }} />}
                   connected={statusData.tagsDb?.connected}
-                  configured={statusData.tagsDb?.configured}
+                  configured={statusData.tagsDb?.configured ?? false}
                   idMasked={statusData.tagsDb?.idMasked}
                   extraInfo={
                     statusData.tagsDb?.connected && typeof statusData.tagsDb?.tagsCount === 'number' ? (
@@ -340,7 +299,7 @@ export function SettingsDrawer({
                   title={statusData.dailyReportDb?.title || '日報DB'}
                   icon={<Calendar size={13} style={{ color: 'var(--accent-primary)' }} />}
                   connected={statusData.dailyReportDb?.connected}
-                  configured={statusData.dailyReportDb?.configured}
+                  configured={statusData.dailyReportDb?.configured ?? false}
                   idMasked={statusData.dailyReportDb?.idMasked}
                   extraInfo={
                     statusData.dailyReportDb?.connected ? (

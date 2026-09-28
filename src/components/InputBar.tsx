@@ -9,16 +9,30 @@ import { getTodayLocalDateString } from '../utils/date';
 interface InputBarProps {
   availableTags: Tag[];
   isTagsConfigured?: boolean;
+  isDailyReportConfigured?: boolean;
   onSubmit: (input: CreatePostInput) => void;
   isSubmitting?: boolean;
 }
 
-export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isSubmitting }: InputBarProps) {
+export function InputBar({
+  availableTags,
+  isTagsConfigured = true,
+  isDailyReportConfigured = true,
+  onSubmit,
+  isSubmitting,
+}: InputBarProps) {
   const [content, setContent] = useState('');
   const [body, setBody] = useState('');
   const [isPinned, setIsPinned] = useState(false);
-  const [linkDailyReport, setLinkDailyReport] = useState(true);
+  const [linkDailyReport, setLinkDailyReport] = useState(isDailyReportConfigured);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+
+  // 日報DBが未設定の場合はリンクを自動OFFに同期
+  useEffect(() => {
+    if (!isDailyReportConfigured) {
+      setLinkDailyReport(false);
+    }
+  }, [isDailyReportConfigured]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -32,10 +46,12 @@ export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isS
       if (draft.title && !content) setContent(draft.title);
       if (draft.body && !body) setBody(draft.body);
       if (typeof draft.pinned === 'boolean') setIsPinned(draft.pinned);
-      if (typeof draft.linkDailyReport === 'boolean') setLinkDailyReport(draft.linkDailyReport);
+      if (typeof draft.linkDailyReport === 'boolean') {
+        setLinkDailyReport(isDailyReportConfigured ? draft.linkDailyReport : false);
+      }
       if (matchedTags.length > 0) setSelectedTags(matchedTags);
     });
-  }, [restoreDraft, content, body]);
+  }, [restoreDraft, content, body, isDailyReportConfigured]);
 
   // 下書き（Draft）の自動保存
   useEffect(() => {
@@ -67,7 +83,7 @@ export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isS
       body: body.trim() || undefined,
       tagIds: selectedTags.map((t) => t.id),
       pinned: isPinned,
-      linkDailyReport,
+      linkDailyReport: isDailyReportConfigured ? linkDailyReport : false,
       clientDate: todayStr,
     });
 
@@ -291,29 +307,31 @@ export function InputBar({ availableTags, isTagsConfigured = true, onSubmit, isS
             {isPinned ? 'ピン固定中' : 'ピン留め'}
           </button>
 
-          {/* 日報紐付けトグルボタン (デフォルト適用) */}
-          <button
-            type="button"
-            onClick={() => setLinkDailyReport(!linkDailyReport)}
-            style={{
-              background: linkDailyReport ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-              border: `1px solid ${linkDailyReport ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-              borderRadius: 'var(--radius-sm)',
-              padding: '6px 12px',
-              color: linkDailyReport ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              fontWeight: linkDailyReport ? 600 : 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            title={linkDailyReport ? '当日の日報ページに自動連携（クリックで解除）' : '日報への連携をスキップ（クリックで連携）'}
-          >
-            <Calendar size={14} />
-            {linkDailyReport ? '日報: ON' : '日報: OFF'}
-          </button>
+          {/* 日報紐付けトグルボタン (日報DB設定時のみ表示) */}
+          {isDailyReportConfigured && (
+            <button
+              type="button"
+              onClick={() => setLinkDailyReport(!linkDailyReport)}
+              style={{
+                background: linkDailyReport ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                border: `1px solid ${linkDailyReport ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                borderRadius: 'var(--radius-sm)',
+                padding: '6px 12px',
+                color: linkDailyReport ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                fontWeight: linkDailyReport ? 600 : 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title={linkDailyReport ? '当日の日報ページに自動連携（クリックで解除）' : '日報への連携をスキップ（クリックで連携）'}
+            >
+              <Calendar size={14} />
+              {linkDailyReport ? '日報: ON' : '日報: OFF'}
+            </button>
+          )}
         </div>
 
         {/* 送信ボタン */}

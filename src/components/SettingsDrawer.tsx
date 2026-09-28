@@ -605,7 +605,7 @@ export function SettingsDrawer({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '16px' }}>
               <Info size={12} />
-              <span>post-notion v1.0.0 • Cloudflare Pages + Notion API</span>
+              <span>post-notion v1.0.1 • Cloudflare Pages + Notion API</span>
             </div>
           </section>
 

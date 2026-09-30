@@ -18,7 +18,12 @@ export default function App() {
   const queryClient = useQueryClient();
   const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
   const { data: tagsData } = useTags();
-  const { isDailyReportConfigured, isTagsConfigured: isSystemTagsConfigured } = useSystemStatus();
+  const {
+    isDailyReportConfigured,
+    isTagsConfigured: isSystemTagsConfigured,
+    isDailyReportAccessible,
+    isTagsAccessible: isSystemTagsAccessible,
+  } = useSystemStatus();
   const { preferences, setDefaultPinned, setDefaultDailyReport, setRequireTag } = useUserPreferences();
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
@@ -35,6 +40,8 @@ export default function App() {
   const tags = tagsData?.tags || [];
   // タグDBが明示的に設定されている場合のみ有効判定（安全サイド）
   const isTagsConfigured = tagsData ? tagsData.configured === true : Boolean(isSystemTagsConfigured);
+  // タグDBがアクセス可能（シークレット設定済み かつ 接続疎通OK）か判定
+  const isTagsAccessible = isTagsConfigured && (isSystemTagsAccessible ?? (tags.length > 0 || !tagsData));
 
   // テーマ変更を HTML data-theme 属性、localStorage、favicon、theme-color meta に同期
   useEffect(() => {
@@ -237,6 +244,8 @@ export default function App() {
         onSetRequireTag={setRequireTag}
         isDailyReportConfigured={isDailyReportConfigured}
         isTagsConfigured={isTagsConfigured}
+        isDailyReportAccessible={isDailyReportAccessible}
+        isTagsAccessible={isTagsAccessible}
       />
 
       {/* メインコンテンツ */}
@@ -244,8 +253,8 @@ export default function App() {
         {/* 高速投稿入力フォーム */}
         <InputBar
           availableTags={tags}
-          isTagsConfigured={isTagsConfigured}
-          isDailyReportConfigured={isDailyReportConfigured}
+          isTagsConfigured={isTagsAccessible}
+          isDailyReportConfigured={isDailyReportAccessible}
           tagLimit={tagsData?.limit}
           defaultPinned={preferences.defaultPinned}
           defaultDailyReport={preferences.defaultDailyReport}
@@ -258,7 +267,7 @@ export default function App() {
         <Timeline
           posts={posts}
           availableTags={tags}
-          isTagsConfigured={isTagsConfigured}
+          isTagsConfigured={isTagsAccessible}
           isLoading={isPostsLoading}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}

@@ -7,12 +7,19 @@ interface TagPickerProps {
   selectedTags: Tag[];
   onToggleTag: (tag: Tag) => void;
   isRequired?: boolean;
+  limit?: number | null;
 }
 
 /**
  * タグ選択ボタンおよびインクリメンタル検索ポップオーバー
  */
-export function TagPicker({ availableTags, selectedTags, onToggleTag, isRequired = false }: TagPickerProps) {
+export function TagPicker({
+  availableTags,
+  selectedTags,
+  onToggleTag,
+  isRequired = false,
+  limit,
+}: TagPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -205,6 +212,22 @@ export function TagPicker({ availableTags, selectedTags, onToggleTag, isRequired
               })
             )}
           </div>
+
+          {/* 1件制限時のフッター表示 */}
+          {limit === 1 && (
+            <div
+              style={{
+                fontSize: '0.73rem',
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+                paddingTop: '6px',
+                borderTop: '1px solid var(--border-color)',
+                userSelect: 'none',
+              }}
+            >
+              1件のみ選択可
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -47,6 +47,7 @@ serverApp.use('*', async (c, next) => {
     NOTION_API_KEY: (current.NOTION_API_KEY ?? latest.NOTION_API_KEY ?? '').trim(),
     NOTION_POSTS_DATABASE_ID: (current.NOTION_POSTS_DATABASE_ID ?? latest.NOTION_POSTS_DATABASE_ID ?? '').trim(),
     NOTION_TAGS_DATABASE_ID: (current.NOTION_TAGS_DATABASE_ID ?? latest.NOTION_TAGS_DATABASE_ID ?? '').trim(),
+    NOTION_TAGS_LIMIT: (current.NOTION_TAGS_LIMIT ?? latest.NOTION_TAGS_LIMIT ?? '').trim(),
     NOTION_DAILY_REPORT_DATABASE_ID: (current.NOTION_DAILY_REPORT_DATABASE_ID ?? latest.NOTION_DAILY_REPORT_DATABASE_ID ?? '').trim(),
   };
   await next();

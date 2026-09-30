@@ -3,6 +3,12 @@ export interface Tag {
   name: string; // 例: "02_運用 - Obsidian"
 }
 
+export interface TagsResponse {
+  tags: Tag[];
+  configured?: boolean;
+  limit?: number | null;
+}
+
 export interface Post {
   id: string;
   title: string;

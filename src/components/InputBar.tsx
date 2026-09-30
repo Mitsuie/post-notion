@@ -10,10 +10,14 @@ interface InputBarProps {
   availableTags: Tag[];
   isTagsConfigured?: boolean;
   isDailyReportConfigured?: boolean;
+  tagLimit?: number | null;
   defaultPinned?: boolean;
   defaultDailyReport?: boolean;
   requireTag?: boolean;
-  onSubmit: (input: CreatePostInput) => void;
+  onSubmit: (
+    input: CreatePostInput,
+    options?: { onError?: (err: any) => void; onSuccess?: () => void }
+  ) => void;
   isSubmitting?: boolean;
 }
 
@@ -21,6 +25,7 @@ export function InputBar({
   availableTags,
   isTagsConfigured = true,
   isDailyReportConfigured = true,
+  tagLimit,
   defaultPinned = false,
   defaultDailyReport = true,
   requireTag = false,
@@ -98,7 +103,7 @@ export function InputBar({
     setContent(newText);
   };
 
-  // 送信処理（摩擦ゼロ: 即時クリア & フォーカス維持）
+  // 送信処理（摩擦ゼロ: 即時クリア & フォーカス維持 + エラー時の安全復元）
   const handleSend = () => {
     const trimmedTitle = content.trim();
     if (!trimmedTitle) return;
@@ -107,16 +112,16 @@ export function InputBar({
     // クライアントのローカル日付（YYYY-MM-DD）
     const todayStr = getTodayLocalDateString();
 
-    onSubmit({
-      title: trimmedTitle,
-      body: body.trim() || undefined,
-      tagIds: selectedTags.map((t) => t.id),
-      pinned: isPinned,
-      linkDailyReport: isDailyReportConfigured ? linkDailyReport : false,
-      clientDate: todayStr,
-    });
+    // 送信失敗時の復元用に現在の入力内容をバックアップ
+    const pendingInput = {
+      content,
+      body,
+      selectedTags: [...selectedTags],
+      isPinned,
+      linkDailyReport,
+    };
 
-    // 0秒クリア & フォーカス維持
+    // 0秒クリア & フォーカス維持（軽快なUX）
     setContent('');
     setBody('');
     setSelectedTags([]);
@@ -124,10 +129,40 @@ export function InputBar({
     setLinkDailyReport(isDailyReportConfigured ? defaultDailyReport : false);
     clearDraft();
 
-    // フォーカス維持
     setTimeout(() => {
       textareaRef.current?.focus();
     }, 10);
+
+    onSubmit(
+      {
+        title: trimmedTitle,
+        body: body.trim() || undefined,
+        tagIds: pendingInput.selectedTags.map((t) => t.id),
+        pinned: pendingInput.isPinned,
+        linkDailyReport: isDailyReportConfigured ? pendingInput.linkDailyReport : false,
+        clientDate: todayStr,
+      },
+      {
+        onError: () => {
+          // 送信エラー発生時: バックアップから入力内容・下書きを完全復元
+          setContent(pendingInput.content);
+          setBody(pendingInput.body);
+          setSelectedTags(pendingInput.selectedTags);
+          setIsPinned(pendingInput.isPinned);
+          setLinkDailyReport(pendingInput.linkDailyReport);
+          saveDraft({
+            title: pendingInput.content,
+            body: pendingInput.body,
+            tagIds: pendingInput.selectedTags.map((t) => t.id),
+            pinned: pendingInput.isPinned,
+            linkDailyReport: pendingInput.linkDailyReport,
+          });
+          setTimeout(() => {
+            textareaRef.current?.focus();
+          }, 10);
+        },
+      }
+    );
   };
 
   // タイトル欄キーボードイベント (Cmd/Ctrl + Enter で送信、通常のEnterによる改行は禁止)
@@ -174,6 +209,17 @@ export function InputBar({
   };
 
   const toggleTag = (tag: Tag) => {
+    if (tagLimit === 1) {
+      // 1件制限モード: 選択済みなら解除、別のタグなら置き換え
+      if (selectedTags.some((t) => t.id === tag.id)) {
+        setSelectedTags([]);
+      } else {
+        setSelectedTags([tag]);
+      }
+      return;
+    }
+
+    // 複数選択モード
     if (selectedTags.some((t) => t.id === tag.id)) {
       setSelectedTags(selectedTags.filter((t) => t.id !== tag.id));
     } else {
@@ -310,6 +356,7 @@ export function InputBar({
               selectedTags={selectedTags}
               onToggleTag={toggleTag}
               isRequired={isTagRequired}
+              limit={tagLimit}
             />
           )}
 

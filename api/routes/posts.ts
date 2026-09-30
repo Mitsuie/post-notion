@@ -244,8 +244,18 @@ postsRouter.post('/', async (c) => {
     });
   } catch (error: any) {
     console.error('Failed to create post in Notion:', error);
+    const errMsg = error?.message || String(error);
+    if (errMsg.includes('limit of 1') || (error?.code === 'validation_error' && errMsg.includes('limit'))) {
+      return c.json(
+        {
+          error: 'Failed to create post',
+          message: 'タグのリレーション設定が1件に制限されているため、複数タグを登録できません。タグを1件のみ選択して再送信してください。',
+        },
+        400
+      );
+    }
     return c.json(
-      { error: 'Failed to create post', message: error.message || String(error) },
+      { error: 'Failed to create post', message: errMsg },
       500
     );
   }

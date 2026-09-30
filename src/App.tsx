@@ -69,10 +69,18 @@ export default function App() {
   };
 
   // 投稿送信ハンドラ
-  const handlePostSubmit = (input: CreatePostInput) => {
+  const handlePostSubmit = (
+    input: CreatePostInput,
+    options?: { onError?: (err: any) => void; onSuccess?: () => void }
+  ) => {
     createPost(input, {
       onError: (err: any) => {
-        setErrorMessage(err.message || '投稿の送信に失敗しました');
+        const msg = err.message || '投稿の送信に失敗しました';
+        setErrorMessage(`${msg}（入力内容を復元しました）`);
+        options?.onError?.(err);
+      },
+      onSuccess: () => {
+        options?.onSuccess?.();
       },
     });
   };
@@ -238,6 +246,7 @@ export default function App() {
           availableTags={tags}
           isTagsConfigured={isTagsConfigured}
           isDailyReportConfigured={isDailyReportConfigured}
+          tagLimit={tagsData?.limit}
           defaultPinned={preferences.defaultPinned}
           defaultDailyReport={preferences.defaultDailyReport}
           requireTag={preferences.requireTag}

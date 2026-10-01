@@ -128,21 +128,9 @@ export function ActiveFilterChips({
         {showResetDefault && (
           <button
             type="button"
+            className="text-btn-muted"
             onClick={onResetDefault}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: 0,
-              fontSize: '0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-            }}
             title="デフォルト（直近30日間・タグ全件）に戻す"
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
           >
             <RotateCcw size={10} />
             <span>初期状態に戻す</span>
@@ -151,19 +139,10 @@ export function ActiveFilterChips({
 
         <button
           type="button"
+          className="text-btn-muted"
           onClick={onClearAll}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: 0,
-            fontSize: '0.75rem',
-            textDecoration: 'underline',
-          }}
+          style={{ textDecoration: 'underline' }}
           title="すべてのフィルターを解除して全投稿を表示"
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
         >
           すべて解除
         </button>

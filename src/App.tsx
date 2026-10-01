@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, X, Menu } from 'lucide-react';
 import { usePosts } from './hooks/usePosts';
@@ -13,6 +13,12 @@ import { SessionExpiredModal } from './components/SessionExpiredModal';
 import { useSystemStatus } from './hooks/useSystemStatus';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import type { CreatePostInput } from './types';
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === 'string') return err;
+  return fallback;
+}
 
 export default function App() {
   const queryClient = useQueryClient();
@@ -71,41 +77,57 @@ export default function App() {
     };
   }, []);
 
-  const toggleTheme = () => {
+  // エラートースト通知の5秒自動消去タイマー
+  useEffect(() => {
+    if (!errorMessage) return;
+    const timer = setTimeout(() => {
+      setErrorMessage(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [errorMessage]);
+
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  }, []);
 
   // 投稿送信ハンドラ
-  const handlePostSubmit = (
-    input: CreatePostInput,
-    options?: { onError?: (err: any) => void; onSuccess?: () => void }
-  ) => {
-    createPost(input, {
-      onError: (err: any) => {
-        const msg = err.message || '投稿の送信に失敗しました';
-        setErrorMessage(`${msg}（入力内容を復元しました）`);
-        options?.onError?.(err);
-      },
-      onSuccess: () => {
-        options?.onSuccess?.();
-      },
-    });
-  };
+  const handlePostSubmit = useCallback(
+    (
+      input: CreatePostInput,
+      options?: { onError?: (err: unknown) => void; onSuccess?: () => void }
+    ) => {
+      createPost(input, {
+        onError: (err: unknown) => {
+          const msg = getErrorMessage(err, '投稿の送信に失敗しました');
+          setErrorMessage(`${msg}（入力内容を復元しました）`);
+          options?.onError?.(err);
+        },
+        onSuccess: () => {
+          options?.onSuccess?.();
+        },
+      });
+    },
+    [createPost]
+  );
 
   // ピン留め切り替えハンドラ
-  const handleTogglePin = (id: string, pinned: boolean) => {
-    togglePin(
-      { id, pinned },
-      {
-        onError: (err: any) => {
-          setErrorMessage(err.message || 'ピン留めの更新に失敗しました');
-        },
-      }
-    );
-  };
+  const handleTogglePin = useCallback(
+    (id: string, pinned: boolean) => {
+      togglePin(
+        { id, pinned },
+        {
+          onError: (err: unknown) => {
+            const msg = getErrorMessage(err, 'ピン留めの更新に失敗しました');
+            setErrorMessage(msg);
+          },
+        }
+      );
+    },
+    [togglePin]
+  );
 
   // 手動リフレッシュ
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['posts'] }),
@@ -113,17 +135,17 @@ export default function App() {
       queryClient.invalidateQueries({ queryKey: ['system-status'] }),
     ]);
     setTimeout(() => setIsRefreshing(false), 500);
-  };
+  }, [queryClient]);
 
   // 再ログイン実行ハンドラ
-  const handleReLogin = () => {
+  const handleReLogin = useCallback(() => {
     reloadPage();
-  };
+  }, []);
 
   // キャッシュクリア＆再ログイン実行ハンドラ
-  const handleClearCacheAndReload = () => {
+  const handleClearCacheAndReload = useCallback(() => {
     clearCacheAndReload();
-  };
+  }, []);
 
   const hasDraft = checkHasDraft();
 
@@ -201,30 +223,10 @@ export default function App() {
         {/* 設定用ハンバーガーメニューボタン */}
         <button
           type="button"
+          className="icon-btn-secondary"
           onClick={() => setIsSettingsOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
           title="設定メニューを開く"
           aria-label="設定メニューを開く"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-hover)';
-            e.currentTarget.style.background = 'var(--bg-tertiary)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-color)';
-            e.currentTarget.style.background = 'var(--bg-secondary)';
-          }}
         >
           <Menu size={18} />
         </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, ExternalLink, Calendar } from 'lucide-react';
 import type { Post, Tag } from '../types';
@@ -21,6 +21,11 @@ export function PostCard({
   const [showComments, setShowComments] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount ?? 0);
+
+  // 親から渡される post.commentsCount の変更をローカルstateに同期
+  useEffect(() => {
+    setCommentsCount(post.commentsCount ?? 0);
+  }, [post.commentsCount]);
 
   // 詳細展開時のみオンデマンドで本文Markdownを取得
   const { data: blocksData, isLoading: isBlocksLoading } = usePostBlocks(showDetails ? post.id : null);
@@ -247,24 +252,7 @@ export function PostCard({
               href={post.url || `https://notion.so/${post.id.replace(/-/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="mobile-action-btn"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 6px',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-muted)',
-                textDecoration: 'none',
-                transition: 'all 0.15s ease',
-                fontWeight: 400,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-muted)';
-              }}
+              className="card-action-btn mobile-action-btn"
               title="Notion公式ページを新しいタブで開く"
             >
               <ExternalLink size={13} />
@@ -276,28 +264,12 @@ export function PostCard({
           {/* 2. 返信一覧ボタン */}
           <button
             type="button"
-            className="mobile-action-btn"
+            className="card-action-btn mobile-action-btn"
             onClick={() => setShowComments((prev) => !prev)}
             style={{
-              background: showComments ? 'var(--accent-light)' : 'none',
-              border: 'none',
-              color: showComments || commentsCount > 0 ? 'var(--accent-primary)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-              padding: '4px 6px',
-              borderRadius: 'var(--radius-sm)',
-              transition: 'all 0.15s ease',
+              background: showComments ? 'var(--accent-light)' : undefined,
+              color: showComments || commentsCount > 0 ? 'var(--accent-primary)' : undefined,
               fontWeight: showComments ? 600 : commentsCount > 0 ? 500 : 400,
-            }}
-            onMouseEnter={(e) => {
-              if (!showComments) e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              if (!showComments) {
-                e.currentTarget.style.color = commentsCount > 0 ? 'var(--accent-primary)' : 'var(--text-muted)';
-              }
             }}
             title="返信コメント一覧を表示/非表示"
           >
@@ -313,26 +285,12 @@ export function PostCard({
           {/* 3. 返信（入力欄）ボタン */}
           <button
             type="button"
-            className="mobile-action-btn"
+            className="card-action-btn mobile-action-btn"
             onClick={() => setShowReplyForm((prev) => !prev)}
             style={{
-              background: showReplyForm ? 'var(--accent-light)' : 'none',
-              border: 'none',
-              color: showReplyForm ? 'var(--accent-primary)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-              padding: '4px 6px',
-              borderRadius: 'var(--radius-sm)',
-              transition: 'all 0.15s ease',
+              background: showReplyForm ? 'var(--accent-light)' : undefined,
+              color: showReplyForm ? 'var(--accent-primary)' : undefined,
               fontWeight: showReplyForm ? 600 : 400,
-            }}
-            onMouseEnter={(e) => {
-              if (!showReplyForm) e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              if (!showReplyForm) e.currentTarget.style.color = 'var(--text-muted)';
             }}
             title="この投稿に返信を作成"
           >

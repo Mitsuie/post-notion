@@ -99,6 +99,7 @@ export function Timeline({
           {/* フィルター開閉ボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={() => setIsFilterPanelOpen((prev) => !prev)}
             style={{
               background: isFilterPanelOpen || isFiltered ? 'var(--accent-light)' : 'var(--bg-tertiary)',
@@ -114,15 +115,17 @@ export function Timeline({
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
-            title="タイムラインの絞り込み（作成日・タグ）"
+            title={activeFilterCount > 0 ? `フィルター適用中 (${activeFilterCount}件)` : 'タイムラインの絞り込み（作成日・タグ）'}
           >
-            <Filter size={11} />
-            <span>フィルター{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+            <Filter size={12} />
+            <span className="hide-on-mobile">フィルター</span>
+            {activeFilterCount > 0 && <span>({activeFilterCount})</span>}
           </button>
 
           {/* ピン留め優先ON/OFFトグルボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={() => setPinPriority((prev) => !prev)}
             style={{
               background: pinPriority ? 'var(--pinned-bg)' : 'var(--bg-tertiary)',
@@ -140,13 +143,14 @@ export function Timeline({
             }}
             title={pinPriority ? 'ピン固定優先: 有効 (クリックで無効化)' : 'ピン固定優先: 無効 (クリックで有効化)'}
           >
-            <Pin size={11} style={{ fill: pinPriority ? 'currentColor' : 'none' }} />
-            <span>固定優先: {pinPriority ? 'ON' : 'OFF'}</span>
+            <Pin size={12} style={{ fill: pinPriority ? 'currentColor' : 'none' }} />
+            <span className="hide-on-mobile">固定優先: {pinPriority ? 'ON' : 'OFF'}</span>
           </button>
 
           {/* 新しい順 / 古い順 切り替えボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
             style={{
               background: 'var(--bg-tertiary)',
@@ -165,7 +169,7 @@ export function Timeline({
             title={sortOrder === 'desc' ? '現在: 新しい順 (クリックで古い順へ)' : '現在: 古い順 (クリックで新しい順へ)'}
           >
             {sortOrder === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
-            <span>{sortOrder === 'desc' ? '新しい順' : '古い順'}</span>
+            <span className="hide-on-mobile">{sortOrder === 'desc' ? '新しい順' : '古い順'}</span>
           </button>
 
           {/* 更新ボタン */}

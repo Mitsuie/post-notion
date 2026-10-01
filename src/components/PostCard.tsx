@@ -215,7 +215,8 @@ export function PostCard({
             }}
           >
             <FileText size={13} />
-            <span>{showDetails ? '本文を閉じる' : '本文を表示'}</span>
+            <span className="hide-on-mobile">{showDetails ? '本文を閉じる' : '本文を表示'}</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>{showDetails ? '閉じる' : '本文'}</span>
             {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
 
@@ -239,13 +240,14 @@ export function PostCard({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* 1. Notionで開く */}
           {(post.url || post.id) && (
             <a
               href={post.url || `https://notion.so/${post.id.replace(/-/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
+              className="mobile-action-btn"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -266,13 +268,14 @@ export function PostCard({
               title="Notion公式ページを新しいタブで開く"
             >
               <ExternalLink size={13} />
-              <span>Notionで開く</span>
+              <span className="hide-on-mobile">Notionで開く</span>
             </a>
           )}
 
           {/* 2. 返信一覧ボタン */}
           <button
             type="button"
+            className="mobile-action-btn"
             onClick={() => setShowComments((prev) => !prev)}
             style={{
               background: showComments ? 'var(--accent-light)' : 'none',
@@ -281,8 +284,8 @@ export function PostCard({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: '4px 8px',
+              gap: '3px',
+              padding: '4px 6px',
               borderRadius: 'var(--radius-sm)',
               transition: 'all 0.15s ease',
               fontWeight: showComments ? 600 : commentsCount > 0 ? 500 : 400,
@@ -301,12 +304,14 @@ export function PostCard({
               size={13}
               style={{ color: commentsCount > 0 || showComments ? 'var(--accent-primary)' : undefined }}
             />
-            <span>返信一覧{commentsCount > 0 ? ` (${commentsCount})` : ''}</span>
+            <span className="hide-on-mobile">返信一覧</span>
+            {commentsCount > 0 && <span>({commentsCount})</span>}
           </button>
 
           {/* 3. 返信（入力欄）ボタン */}
           <button
             type="button"
+            className="mobile-action-btn"
             onClick={() => setShowReplyForm((prev) => !prev)}
             style={{
               background: showReplyForm ? 'var(--accent-light)' : 'none',
@@ -315,8 +320,8 @@ export function PostCard({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: '4px 8px',
+              gap: '3px',
+              padding: '4px 6px',
               borderRadius: 'var(--radius-sm)',
               transition: 'all 0.15s ease',
               fontWeight: showReplyForm ? 600 : 400,
@@ -330,7 +335,7 @@ export function PostCard({
             title="この投稿に返信を作成"
           >
             <MessageSquarePlus size={13} />
-            <span>返信</span>
+            <span className="hide-on-mobile">返信</span>
           </button>
         </div>
       </div>

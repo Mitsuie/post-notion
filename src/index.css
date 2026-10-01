@@ -255,3 +255,33 @@ body {
   color: var(--accent-primary);
   text-decoration: underline;
 }
+
+/* ==========================================================================
+   モバイルレスポンシブ ユーティリティ (幅 600px 以下)
+   ========================================================================== */
+@media (max-width: 600px) {
+  /* スマホ画面で非表示にするテキスト用 */
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  /* スマホ画面でのみ表示するテキスト用 */
+  .show-on-mobile {
+    display: inline !important;
+  }
+
+  /* 入力バー・ツールバー等のアイコンボタン最適化 */
+  .mobile-icon-btn {
+    padding: 6px 9px !important;
+    min-width: 34px;
+    min-height: 34px;
+    justify-content: center;
+  }
+
+  /* 投稿カード下部アクションボタン最適化 */
+  .mobile-action-btn {
+    padding: 4px 6px !important;
+    gap: 3px !important;
+  }
+}
+

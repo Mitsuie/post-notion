@@ -95,10 +95,11 @@ export function Timeline({
         </h2>
 
         {/* ソート & フィルタ & 更新コントロール */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="timeline-controls-grid" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* フィルター開閉ボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={() => setIsFilterPanelOpen((prev) => !prev)}
             style={{
               background: isFilterPanelOpen || isFiltered ? 'var(--accent-light)' : 'var(--bg-tertiary)',
@@ -106,6 +107,7 @@ export function Timeline({
               color: isFilterPanelOpen || isFiltered ? 'var(--accent-primary)' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
               padding: '4px 8px',
+              minHeight: '34px',
               fontSize: '0.75rem',
               fontWeight: isFiltered ? 600 : 500,
               display: 'flex',
@@ -114,15 +116,18 @@ export function Timeline({
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
-            title="タイムラインの絞り込み（作成日・タグ）"
+            title={activeFilterCount > 0 ? `フィルター適用中 (${activeFilterCount}件)` : 'タイムラインの絞り込み（作成日・タグ）'}
           >
-            <Filter size={11} />
-            <span>フィルター{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+            <Filter size={12} />
+            <span className="hide-on-mobile">フィルター</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>絞込</span>
+            {activeFilterCount > 0 && <span>({activeFilterCount})</span>}
           </button>
 
           {/* ピン留め優先ON/OFFトグルボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={() => setPinPriority((prev) => !prev)}
             style={{
               background: pinPriority ? 'var(--pinned-bg)' : 'var(--bg-tertiary)',
@@ -130,6 +135,7 @@ export function Timeline({
               color: pinPriority ? 'var(--pinned-color)' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
               padding: '4px 8px',
+              minHeight: '34px',
               fontSize: '0.75rem',
               fontWeight: 500,
               display: 'flex',
@@ -140,13 +146,15 @@ export function Timeline({
             }}
             title={pinPriority ? 'ピン固定優先: 有効 (クリックで無効化)' : 'ピン固定優先: 無効 (クリックで有効化)'}
           >
-            <Pin size={11} style={{ fill: pinPriority ? 'currentColor' : 'none' }} />
-            <span>固定優先: {pinPriority ? 'ON' : 'OFF'}</span>
+            <Pin size={12} style={{ fill: pinPriority ? 'currentColor' : 'none' }} />
+            <span className="hide-on-mobile">固定優先: {pinPriority ? 'ON' : 'OFF'}</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>固定</span>
           </button>
 
           {/* 新しい順 / 古い順 切り替えボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
             style={{
               background: 'var(--bg-tertiary)',
@@ -154,6 +162,7 @@ export function Timeline({
               color: 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
               padding: '4px 8px',
+              minHeight: '34px',
               fontSize: '0.75rem',
               fontWeight: 500,
               display: 'flex',
@@ -165,12 +174,14 @@ export function Timeline({
             title={sortOrder === 'desc' ? '現在: 新しい順 (クリックで古い順へ)' : '現在: 古い順 (クリックで新しい順へ)'}
           >
             {sortOrder === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
-            <span>{sortOrder === 'desc' ? '新しい順' : '古い順'}</span>
+            <span className="hide-on-mobile">{sortOrder === 'desc' ? '新しい順' : '古い順'}</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>{sortOrder === 'desc' ? '新着' : '過去'}</span>
           </button>
 
           {/* 更新ボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={onRefresh}
             disabled={isLoading || isRefreshing}
             style={{
@@ -179,6 +190,7 @@ export function Timeline({
               color: 'var(--text-secondary)',
               cursor: isLoading || isRefreshing ? 'not-allowed' : 'pointer',
               padding: '4px 8px',
+              minHeight: '34px',
               borderRadius: 'var(--radius-sm)',
               display: 'flex',
               alignItems: 'center',

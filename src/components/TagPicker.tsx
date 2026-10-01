@@ -48,6 +48,7 @@ export function TagPicker({
     <div style={{ position: 'relative' }} ref={pickerRef}>
       <button
         type="button"
+        className="mobile-icon-btn"
         onClick={() => setIsOpen(!isOpen)}
         title={isRequired && selectedTags.length === 0 ? 'タグ選択（必須）' : 'タグ選択'}
         style={{
@@ -66,7 +67,8 @@ export function TagPicker({
         }}
       >
         <Hash size={14} />
-        <span>タグ選択</span>
+        <span className="hide-on-mobile">タグ選択</span>
+        <span className="show-on-mobile" style={{ display: 'none' }}>タグ</span>
         {isRequired && selectedTags.length === 0 && (
           <span
             style={{

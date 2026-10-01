@@ -363,6 +363,7 @@ export function InputBar({
           {/* ピン留めトグルボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={() => setIsPinned(!isPinned)}
             style={{
               background: isPinned ? 'var(--pinned-bg)' : 'var(--bg-tertiary)',
@@ -381,13 +382,15 @@ export function InputBar({
             title={isPinned ? 'ピン固定を解除' : 'タイムライン最上部にピン固定'}
           >
             <Pin size={14} style={{ fill: isPinned ? 'currentColor' : 'none' }} />
-            {isPinned ? 'ピン固定中' : 'ピン留め'}
+            <span className="hide-on-mobile">{isPinned ? 'ピン固定中' : 'ピン留め'}</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>固定</span>
           </button>
 
           {/* 日報紐付けトグルボタン (日報DB設定時のみ表示) */}
           {isDailyReportConfigured && (
             <button
               type="button"
+              className="mobile-icon-btn"
               onClick={() => setLinkDailyReport(!linkDailyReport)}
               style={{
                 background: linkDailyReport ? 'var(--accent-light)' : 'var(--bg-tertiary)',
@@ -406,12 +409,13 @@ export function InputBar({
               title={linkDailyReport ? '当日の日報ページに自動連携（クリックで解除）' : '日報への連携をスキップ（クリックで連携）'}
             >
               <Calendar size={14} />
-              {linkDailyReport ? '日報: ON' : '日報: OFF'}
+              <span className="hide-on-mobile">{linkDailyReport ? '日報: ON' : '日報: OFF'}</span>
+              <span className="show-on-mobile" style={{ display: 'none' }}>日報</span>
             </button>
           )}
         </div>
 
-        {/* 送信ボタン */}
+        {/* 送信ボタン（ユーザー指示により「投稿」文字を維持） */}
         <button
           type="button"
           onClick={handleSend}
@@ -421,7 +425,7 @@ export function InputBar({
             color: !isSubmitDisabled ? '#ffffff' : 'var(--text-muted)',
             border: 'none',
             borderRadius: 'var(--radius-md)',
-            padding: '8px 18px',
+            padding: '8px 16px',
             fontSize: '0.875rem',
             fontWeight: 600,
             display: 'flex',
@@ -430,6 +434,7 @@ export function InputBar({
             cursor: !isSubmitDisabled ? 'pointer' : 'not-allowed',
             transition: 'all 0.15s ease',
             boxShadow: !isSubmitDisabled ? '0 2px 8px rgba(79, 70, 229, 0.35)' : 'none',
+            flexShrink: 0,
           }}
           title={
             isSubmitting

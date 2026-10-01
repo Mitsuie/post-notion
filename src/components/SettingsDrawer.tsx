@@ -97,6 +97,8 @@ interface SettingsDrawerProps {
   onSetRequireTag: (val: boolean) => void;
   isDailyReportConfigured?: boolean;
   isTagsConfigured?: boolean;
+  isDailyReportAccessible?: boolean;
+  isTagsAccessible?: boolean;
 }
 
 export function SettingsDrawer({
@@ -112,6 +114,8 @@ export function SettingsDrawer({
   onSetRequireTag,
   isDailyReportConfigured = false,
   isTagsConfigured = false,
+  isDailyReportAccessible,
+  isTagsAccessible,
 }: SettingsDrawerProps) {
   // ESCキーでドロワーを閉じる
   useEffect(() => {
@@ -142,9 +146,17 @@ export function SettingsDrawer({
     isLoading: isStatusLoading,
     isRefetching: isStatusRefetching,
     refetch: refetchStatus,
+    isDailyReportAccessible: isSystemDailyReportAccessible,
+    isTagsAccessible: isSystemTagsAccessible,
   } = useSystemStatus({ enabled: isOpen });
 
   if (!isOpen) return null;
+
+  // タグDB / 日報DB がアクセス可能（シークレット設定済み かつ 接続疎通OK）か判定
+  const canAccessDailyReport =
+    isDailyReportAccessible ?? (isDailyReportConfigured && isSystemDailyReportAccessible);
+  const canAccessTags =
+    isTagsAccessible ?? (isTagsConfigured && isSystemTagsAccessible);
 
   const isWorking = isStatusLoading || isStatusRefetching;
 
@@ -337,89 +349,81 @@ export function SettingsDrawer({
                 />
               </div>
 
-              {/* 日報連携デフォルト設定 */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 12px',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  opacity: isDailyReportConfigured ? 1 : 0.6,
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    <Calendar size={14} style={{ color: 'var(--accent-primary)' }} />
-                    <span>日報連携のデフォルト</span>
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {isDailyReportConfigured ? '当日の日報ページへの自動連携' : '日報DB未登録のため無効'}
-                  </div>
-                </div>
-                {/* iOS スタイル トグルスイッチ */}
-                <ToggleSwitch
-                  checked={preferences.defaultDailyReport && isDailyReportConfigured}
-                  disabled={!isDailyReportConfigured}
-                  activeColor="var(--accent-primary)"
-                  onChange={onSetDefaultDailyReport}
-                  ariaLabel="日報連携のデフォルト設定"
-                  title={
-                    !isDailyReportConfigured
-                      ? '日報DB未登録のため無効'
-                      : preferences.defaultDailyReport
-                      ? '現在: ON (クリックでOFF)'
-                      : '現在: OFF (クリックでON)'
-                  }
-                  theme={theme}
-                />
-              </div>
-
-              {/* タグ選択の必須化設定 */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 12px',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  opacity: isTagsConfigured ? 1 : 0.5,
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    <Hash size={14} style={{ color: 'var(--accent-primary)' }} />
-                    <span>タグ選択の必須化</span>
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {isTagsConfigured ? '投稿時に1つ以上のタグ選択を必須にする' : 'タグDB未登録のため無効'}
-                  </div>
-                </div>
-                {/* iOS スタイル トグルスイッチ */}
-                <ToggleSwitch
-                  checked={preferences.requireTag && isTagsConfigured}
-                  disabled={!isTagsConfigured}
-                  activeColor="var(--accent-primary)"
-                  onChange={(val) => {
-                    if (isTagsConfigured) {
-                      onSetRequireTag(val);
-                    }
+              {/* 日報連携デフォルト設定 (日報DBアクセス可能時のみ表示) */}
+              {canAccessDailyReport && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 12px',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
                   }}
-                  ariaLabel="タグ選択の必須化設定"
-                  title={
-                    !isTagsConfigured
-                      ? 'タグDB未登録のため変更できません'
-                      : preferences.requireTag
-                      ? '現在: 必須 (クリックで任意に変更)'
-                      : '現在: 任意 (クリックで必須に変更)'
-                  }
-                  theme={theme}
-                />
-              </div>
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <Calendar size={14} style={{ color: 'var(--accent-primary)' }} />
+                      <span>日報連携のデフォルト</span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      当日の日報ページへの自動連携
+                    </div>
+                  </div>
+                  {/* iOS スタイル トグルスイッチ */}
+                  <ToggleSwitch
+                    checked={preferences.defaultDailyReport}
+                    activeColor="var(--accent-primary)"
+                    onChange={onSetDefaultDailyReport}
+                    ariaLabel="日報連携のデフォルト設定"
+                    title={
+                      preferences.defaultDailyReport
+                        ? '現在: ON (クリックでOFF)'
+                        : '現在: OFF (クリックでON)'
+                    }
+                    theme={theme}
+                  />
+                </div>
+              )}
+
+              {/* タグ選択の必須化設定 (タグDBアクセス可能時のみ表示) */}
+              {canAccessTags && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 12px',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <Hash size={14} style={{ color: 'var(--accent-primary)' }} />
+                      <span>タグ選択の必須化</span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      投稿時に1つ以上のタグ選択を必須にする
+                    </div>
+                  </div>
+                  {/* iOS スタイル トグルスイッチ */}
+                  <ToggleSwitch
+                    checked={preferences.requireTag}
+                    activeColor="var(--accent-primary)"
+                    onChange={onSetRequireTag}
+                    ariaLabel="タグ選択の必須化設定"
+                    title={
+                      preferences.requireTag
+                        ? '現在: 必須 (クリックで任意に変更)'
+                        : '現在: 任意 (クリックで必須に変更)'
+                    }
+                    theme={theme}
+                  />
+                </div>
+              )}
             </div>
           </section>
 
@@ -483,39 +487,43 @@ export function SettingsDrawer({
                   error={statusData.postsDb?.error}
                 />
 
-                {/* Tags データベース */}
-                <DbStatusCard
-                  title={statusData.tagsDb?.title || 'タグDB'}
-                  icon={<Database size={13} style={{ color: '#10b981' }} />}
-                  connected={statusData.tagsDb?.connected}
-                  configured={statusData.tagsDb?.configured ?? false}
-                  idMasked={statusData.tagsDb?.idMasked}
-                  extraInfo={
-                    statusData.tagsDb?.connected && typeof statusData.tagsDb?.tagsCount === 'number' ? (
-                      <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
-                        {statusData.tagsDb.tagsCount}件のタグ登録
-                      </span>
-                    ) : undefined
-                  }
-                  error={statusData.tagsDb?.error}
-                />
+                {/* Tags データベース (シークレット設定時のみ表示) */}
+                {statusData.tagsDb?.configured && (
+                  <DbStatusCard
+                    title={statusData.tagsDb?.title || 'タグDB'}
+                    icon={<Database size={13} style={{ color: '#10b981' }} />}
+                    connected={statusData.tagsDb?.connected}
+                    configured={statusData.tagsDb?.configured ?? false}
+                    idMasked={statusData.tagsDb?.idMasked}
+                    extraInfo={
+                      statusData.tagsDb?.connected && typeof statusData.tagsDb?.tagsCount === 'number' ? (
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                          {statusData.tagsDb.tagsCount}件のタグ登録
+                        </span>
+                      ) : undefined
+                    }
+                    error={statusData.tagsDb?.error}
+                  />
+                )}
 
-                {/* 日報データベース (DB_日報) */}
-                <DbStatusCard
-                  title={statusData.dailyReportDb?.title || '日報DB'}
-                  icon={<Calendar size={13} style={{ color: 'var(--accent-primary)' }} />}
-                  connected={statusData.dailyReportDb?.connected}
-                  configured={statusData.dailyReportDb?.configured ?? false}
-                  idMasked={statusData.dailyReportDb?.idMasked}
-                  extraInfo={
-                    statusData.dailyReportDb?.connected ? (
-                      <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
-                        連携中
-                      </span>
-                    ) : undefined
-                  }
-                  error={statusData.dailyReportDb?.error}
-                />
+                {/* 日報データベース (DB_日報) (シークレット設定時のみ表示) */}
+                {statusData.dailyReportDb?.configured && (
+                  <DbStatusCard
+                    title={statusData.dailyReportDb?.title || '日報DB'}
+                    icon={<Calendar size={13} style={{ color: 'var(--accent-primary)' }} />}
+                    connected={statusData.dailyReportDb?.connected}
+                    configured={statusData.dailyReportDb?.configured ?? false}
+                    idMasked={statusData.dailyReportDb?.idMasked}
+                    extraInfo={
+                      statusData.dailyReportDb?.connected ? (
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                          連携中
+                        </span>
+                      ) : undefined
+                    }
+                    error={statusData.dailyReportDb?.error}
+                  />
+                )}
 
 
                 {/* API認証ステータス */}

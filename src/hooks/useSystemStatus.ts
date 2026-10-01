@@ -21,10 +21,16 @@ export function useSystemStatus(options?: UseSystemStatusOptions) {
   const isDailyReportConfigured = !!query.data?.dailyReportDb?.configured;
   const isTagsConfigured = !!query.data?.tagsDb?.configured;
 
+  // dailyReportDb / tagsDb が実際に利用可能（設定済み かつ 接続疎通OK）か判定
+  const isDailyReportAccessible = isDailyReportConfigured && !!query.data?.dailyReportDb?.connected;
+  const isTagsAccessible = isTagsConfigured && !!query.data?.tagsDb?.connected;
+
   return {
     ...query,
     statusData: query.data,
     isDailyReportConfigured,
     isTagsConfigured,
+    isDailyReportAccessible,
+    isTagsAccessible,
   };
 }

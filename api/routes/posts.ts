@@ -1,13 +1,20 @@
 import { Hono } from 'hono';
 import { NotionToMarkdown } from 'notion-to-md';
-import type { Bindings, PostItem, CreatePostPayload, UpdatePostPayload, CommentItem, CreateCommentPayload } from '../types.ts';
+import type {
+  Bindings,
+  PostItem,
+  CreatePostPayload,
+  UpdatePostPayload,
+  CommentItem,
+  CreateCommentPayload,
+} from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
-
-export const postsRouter = new Hono<{ Bindings: Bindings }>();
-
 import { findPropertyKey } from '../utils/notion.ts';
 import { parseMarkdownToNotionBlocks } from '../utils/markdownToNotion.ts';
+import { resolveDailyReportPageId } from '../utils/dailyReport.ts';
+import { syncCommentsCount, incrementCommentsCount } from '../utils/comments.ts';
 
+export const postsRouter = new Hono<{ Bindings: Bindings }>();
 
 // タイムライン一覧取得
 postsRouter.get('/', async (c) => {
@@ -44,9 +51,9 @@ postsRouter.get('/', async (c) => {
       // Tags (Relation)
       const tagsKey = findPropertyKey(props, ['Tags', 'タグ'], 'relation');
       const tagRelations = tagsKey ? props[tagsKey]?.relation || [] : [];
-      const tags = tagRelations.map((rel: any) => ({
+      const tags = tagRelations.map((rel: { id: string }) => ({
         id: rel.id,
-        name: '', // 詳細名はクライアント側でタグ一覧から解決可能
+        name: '', // 詳細名はクライアント側でタグ一覧から解決
       }));
 
       // Pinned
@@ -54,7 +61,11 @@ postsRouter.get('/', async (c) => {
       const pinned = pinnedKey ? !!props[pinnedKey]?.checkbox : false;
 
       // Daily Report (Relation)
-      const dailyReportKey = findPropertyKey(props, ['DB_日報', '日報', 'Daily Report', 'デイリー'], 'relation');
+      const dailyReportKey = findPropertyKey(
+        props,
+        ['DB_日報', '日報', 'Daily Report', 'デイリー'],
+        'relation'
+      );
       const dailyRelations = dailyReportKey ? props[dailyReportKey]?.relation || [] : [];
       const dailyReport = dailyRelations.length > 0 ? { id: dailyRelations[0].id } : null;
 
@@ -90,12 +101,10 @@ postsRouter.get('/', async (c) => {
     });
 
     return c.json({ posts });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('Failed to fetch posts from Notion:', error);
-    return c.json(
-      { error: 'Failed to fetch posts', message: error.message || String(error) },
-      500
-    );
+    return c.json({ error: 'Failed to fetch posts', message: errMsg }, 500);
   }
 });
 
@@ -122,9 +131,12 @@ postsRouter.post('/', async (c) => {
     const db = await notion.databases.retrieve({ database_id: env.NOTION_POSTS_DATABASE_ID });
     const props = db.properties;
 
-    const titleKey = findPropertyKey(props, ['タイトル', '名前', 'Title', 'Name'], 'title') || 'タイトル';
+    const titleKey =
+      findPropertyKey(props, ['タイトル', '名前', 'Title', 'Name'], 'title') || 'タイトル';
     const tagsKey = findPropertyKey(props, ['タグ', 'Tags'], 'relation') || 'タグ';
-    const pinnedKey = findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox') || 'ピン止め';
+    const pinnedKey =
+      findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox') ||
+      'ピン止め';
 
     const sanitizedTitle = payload.title.replace(/[\r\n]+/g, ' ').trim();
 
@@ -158,54 +170,29 @@ postsRouter.post('/', async (c) => {
     let dailyReportLinked = false;
     let dailyReportWarning: string | undefined = undefined;
 
-    if (payload.linkDailyReport !== false && env.NOTION_DAILY_REPORT_DATABASE_ID && env.NOTION_DAILY_REPORT_DATABASE_ID.trim()) {
-      try {
-        const dailyDbId = env.NOTION_DAILY_REPORT_DATABASE_ID;
-        // ターゲット日付を決定（クライアント指定日付、またはAsia/Tokyoの当日）
-        let targetDate = payload.clientDate;
-        if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
-          targetDate = new Intl.DateTimeFormat('ja-JP', {
-            timeZone: 'Asia/Tokyo',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          }).format(new Date()).replace(/\//g, '-');
+    if (
+      payload.linkDailyReport !== false &&
+      env.NOTION_DAILY_REPORT_DATABASE_ID &&
+      env.NOTION_DAILY_REPORT_DATABASE_ID.trim()
+    ) {
+      const dailyResult = await resolveDailyReportPageId(
+        notion,
+        env.NOTION_DAILY_REPORT_DATABASE_ID,
+        payload.clientDate
+      );
+
+      if (dailyResult.dailyPageId) {
+        const dailyRelKey =
+          findPropertyKey(props, ['DB_日報', '日報', 'Daily Report', 'デイリー'], 'relation') ||
+          'DB_日報';
+        if (props[dailyRelKey]) {
+          properties[dailyRelKey] = {
+            relation: [{ id: dailyResult.dailyPageId }],
+          };
+          dailyReportLinked = true;
         }
-
-        // 日報DBのプロパティから日付プロパティ名を自動解決
-        const dailyDb = await notion.databases.retrieve({ database_id: dailyDbId });
-        const dateKey = findPropertyKey(dailyDb.properties, ['日付', 'Date', '作成日'], 'date') || '日付';
-
-        // 当日の日報ページをクエリ検索
-        const dailyQuery = await notion.databases.query({
-          database_id: dailyDbId,
-          filter: {
-            property: dateKey,
-            date: {
-              equals: targetDate,
-            },
-          },
-          page_size: 1,
-        });
-
-        if (dailyQuery.results.length > 0) {
-          const dailyPageId = dailyQuery.results[0].id;
-          const dailyRelKey = findPropertyKey(props, ['DB_日報', '日報', 'Daily Report', 'デイリー'], 'relation') || 'DB_日報';
-          if (props[dailyRelKey]) {
-            properties[dailyRelKey] = {
-              relation: [{ id: dailyPageId }],
-            };
-            dailyReportLinked = true;
-          }
-        } else {
-          // 当日の日報ページが見つからない場合: 仕様に基づきスキップ
-          dailyReportLinked = false;
-          dailyReportWarning = `日付 ${targetDate} の日報ページが見つからなかったため、日報リレーション付与をスキップしました`;
-          console.warn(`[posts.post] ${dailyReportWarning}`);
-        }
-      } catch (dailyErr: any) {
-        console.warn('Failed to resolve daily report relation, skipping:', dailyErr.message || dailyErr);
-        dailyReportWarning = `日報連携処理中にエラーが発生したためスキップしました: ${dailyErr.message || String(dailyErr)}`;
+      } else {
+        dailyReportWarning = dailyResult.warning;
       }
     }
 
@@ -245,22 +232,22 @@ postsRouter.post('/', async (c) => {
   } catch (error: any) {
     console.error('Failed to create post in Notion:', error);
     const errMsg = error?.message || String(error);
-    if (errMsg.includes('limit of 1') || (error?.code === 'validation_error' && errMsg.includes('limit'))) {
+    if (
+      errMsg.includes('limit of 1') ||
+      (error?.code === 'validation_error' && errMsg.includes('limit'))
+    ) {
       return c.json(
         {
           error: 'Failed to create post',
-          message: 'タグのリレーション設定が1件に制限されているため、複数タグを登録できません。タグを1件のみ選択して再送信してください。',
+          message:
+            'タグのリレーション設定が1件に制限されているため、複数タグを登録できません。タグを1件のみ選択して再送信してください。',
         },
         400
       );
     }
-    return c.json(
-      { error: 'Failed to create post', message: errMsg },
-      500
-    );
+    return c.json({ error: 'Failed to create post', message: errMsg }, 500);
   }
 });
-
 
 // 投稿プロパティ更新（ピン留め動的トグルなど）
 postsRouter.patch('/:id', async (c) => {
@@ -280,7 +267,9 @@ postsRouter.patch('/:id', async (c) => {
   try {
     const db = await notion.databases.retrieve({ database_id: env.NOTION_POSTS_DATABASE_ID });
     const props = db.properties;
-    const pinnedKey = findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox') || 'ピン止め';
+    const pinnedKey =
+      findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox') ||
+      'ピン止め';
 
     const properties: Record<string, any> = {};
     if (typeof payload.pinned === 'boolean' && props[pinnedKey]) {
@@ -299,12 +288,10 @@ postsRouter.patch('/:id', async (c) => {
       id,
       pinned: payload.pinned,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to update post ${id}:`, error);
-    return c.json(
-      { error: 'Failed to update post', message: error.message || String(error) },
-      500
-    );
+    return c.json({ error: 'Failed to update post', message: errMsg }, 500);
   }
 });
 
@@ -332,12 +319,10 @@ postsRouter.get('/:id/blocks', async (c) => {
       markdown: mdString.parent || '',
       url: page.url || `https://notion.so/${id.replace(/-/g, '')}`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to fetch blocks for post ${id}:`, error);
-    return c.json(
-      { error: 'Failed to fetch blocks', message: error.message || String(error) },
-      500
-    );
+    return c.json({ error: 'Failed to fetch blocks', message: errMsg }, 500);
   }
 });
 
@@ -374,41 +359,14 @@ postsRouter.get('/:id/comments', async (c) => {
 
     const actualCount = res.results.length;
 
-    // ハイブリッド補正: Notionページの「コメント追加回数」プロパティと実数を突合し、差分があれば最新化
-    try {
-      const page: any = await notion.pages.retrieve({ page_id: id });
-      const countKey = findPropertyKey(
-        page.properties,
-        ['コメント追加回数', 'Comments Count', 'コメント数', 'comments_count'],
-        'number'
-      );
-      if (countKey) {
-        const storedCount =
-          typeof page.properties[countKey]?.number === 'number'
-            ? page.properties[countKey].number
-            : 0;
-        if (storedCount !== actualCount) {
-          await notion.pages.update({
-            page_id: id,
-            properties: {
-              [countKey]: {
-                number: actualCount,
-              },
-            },
-          });
-        }
-      }
-    } catch (syncErr) {
-      console.warn(`Failed to sync commentsCount for page ${id}:`, syncErr);
-    }
+    // ハイブリッド補正: Notionページの「コメント追加回数」プロパティと実数を同期
+    await syncCommentsCount(notion, id, actualCount);
 
     return c.json({ comments, commentsCount: actualCount });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to fetch comments for post ${id}:`, error);
-    return c.json(
-      { error: 'Failed to fetch comments', message: error.message || String(error) },
-      500
-    );
+    return c.json({ error: 'Failed to fetch comments', message: errMsg }, 500);
   }
 });
 
@@ -466,40 +424,12 @@ postsRouter.post('/:id/comments', async (c) => {
     };
 
     // コメント追加回数のインクリメント
-    let updatedCount: number | undefined = undefined;
-    try {
-      const page: any = await notion.pages.retrieve({ page_id: id });
-      const countKey = findPropertyKey(
-        page.properties,
-        ['コメント追加回数', 'Comments Count', 'コメント数', 'comments_count'],
-        'number'
-      );
-      if (countKey) {
-        const currentCount =
-          typeof page.properties[countKey]?.number === 'number'
-            ? page.properties[countKey].number
-            : 0;
-        updatedCount = currentCount + 1;
-        await notion.pages.update({
-          page_id: id,
-          properties: {
-            [countKey]: {
-              number: updatedCount,
-            },
-          } as any,
-        });
-      }
-    } catch (countErr) {
-      console.warn(`Failed to increment commentsCount for page ${id}:`, countErr);
-    }
+    const updatedCount = await incrementCommentsCount(notion, id);
 
     return c.json({ comment: resultItem, commentsCount: updatedCount }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to create comment for post ${id}:`, error);
-    return c.json(
-      { error: 'Failed to create comment', message: error.message || String(error) },
-      500
-    );
+    return c.json({ error: 'Failed to create comment', message: errMsg }, 500);
   }
 });
-

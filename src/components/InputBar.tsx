@@ -16,7 +16,7 @@ interface InputBarProps {
   requireTag?: boolean;
   onSubmit: (
     input: CreatePostInput,
-    options?: { onError?: (err: any) => void; onSuccess?: () => void }
+    options?: { onError?: (err: unknown) => void; onSuccess?: () => void }
   ) => void;
   isSubmitting?: boolean;
 }

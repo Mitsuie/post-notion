@@ -201,30 +201,10 @@ export default function App() {
         {/* 設定用ハンバーガーメニューボタン */}
         <button
           type="button"
+          className="icon-btn-secondary"
           onClick={() => setIsSettingsOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
           title="設定メニューを開く"
           aria-label="設定メニューを開く"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-hover)';
-            e.currentTarget.style.background = 'var(--bg-tertiary)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-color)';
-            e.currentTarget.style.background = 'var(--bg-secondary)';
-          }}
         >
           <Menu size={18} />
         </button>

@@ -232,34 +232,13 @@ export function TimelineFilterModal({
                 <button
                   key={tag.id}
                   type="button"
+                  className={`filter-tag-item ${isSelected ? 'selected' : ''}`}
                   onClick={() => onToggleTag(tag.id)}
                   style={{
-                    width: '100%',
                     background: isSelected ? 'var(--accent-light)' : 'var(--bg-tertiary)',
                     border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-color)'}`,
                     color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '6px 10px',
-                    fontSize: '0.75rem',
                     fontWeight: isSelected ? 600 : 400,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'var(--bg-hover)';
-                      e.currentTarget.style.color = 'var(--text-primary)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'var(--bg-tertiary)';
-                      e.currentTarget.style.color = 'var(--text-secondary)';
-                    }
                   }}
                 >
                   {/* チェックボックス風アイコン */}
@@ -304,20 +283,9 @@ export function TimelineFilterModal({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
+            className="text-btn-muted"
             onClick={() => setFilter(DEFAULT_FILTER)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: 0,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+            title="デフォルト（直近30日）に戻す"
           >
             <RotateCcw size={11} />
             <span>デフォルト（直近30日）に戻す</span>
@@ -325,6 +293,7 @@ export function TimelineFilterModal({
 
           <button
             type="button"
+            className="text-btn-muted"
             onClick={() =>
               setFilter({
                 datePreset: 'all',
@@ -333,16 +302,6 @@ export function TimelineFilterModal({
                 selectedTagIds: [],
               })
             }
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-              padding: 0,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
           >
             全条件をクリア
           </button>

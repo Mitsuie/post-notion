@@ -178,27 +178,14 @@ export function TagPicker({
                   <button
                     key={tag.id}
                     type="button"
+                    className={`tag-dropdown-item ${isSelected ? 'selected' : ''}`}
                     onClick={() => onToggleTag(tag)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
                       padding: '7px 10px',
                       borderRadius: 'var(--radius-sm)',
-                      border: 'none',
-                      background: isSelected ? 'var(--accent-light)' : 'transparent',
+                      background: isSelected ? 'var(--accent-light)' : undefined,
                       color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
-                      fontSize: '0.85rem',
                       fontWeight: isSelected ? 600 : 400,
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'background 0.12s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = 'var(--bg-tertiary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = 'transparent';
                     }}
                   >
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

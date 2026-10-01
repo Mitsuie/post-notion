@@ -383,6 +383,7 @@ export function InputBar({
           >
             <Pin size={14} style={{ fill: isPinned ? 'currentColor' : 'none' }} />
             <span className="hide-on-mobile">{isPinned ? 'ピン固定中' : 'ピン留め'}</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>固定</span>
           </button>
 
           {/* 日報紐付けトグルボタン (日報DB設定時のみ表示) */}
@@ -409,6 +410,7 @@ export function InputBar({
             >
               <Calendar size={14} />
               <span className="hide-on-mobile">{linkDailyReport ? '日報: ON' : '日報: OFF'}</span>
+              <span className="show-on-mobile" style={{ display: 'none' }}>日報</span>
             </button>
           )}
         </div>

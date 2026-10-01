@@ -278,10 +278,19 @@ body {
     justify-content: center;
   }
 
-  /* 投稿カード下部アクションボタン最適化 */
-  .mobile-action-btn {
-    padding: 4px 6px !important;
-    gap: 3px !important;
+  /* タイムラインの4つの操作ボタンを左右均等（4等分グリッド）配置 */
+  .timeline-controls-grid {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
+    margin-top: 6px;
+  }
+  .timeline-controls-grid > button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 6px 4px !important;
   }
 }
+
 

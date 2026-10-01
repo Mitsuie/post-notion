@@ -68,6 +68,7 @@ export function TagPicker({
       >
         <Hash size={14} />
         <span className="hide-on-mobile">タグ選択</span>
+        <span className="show-on-mobile" style={{ display: 'none' }}>タグ</span>
         {isRequired && selectedTags.length === 0 && (
           <span
             style={{

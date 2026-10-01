@@ -269,6 +269,7 @@ export function PostCard({
             >
               <ExternalLink size={13} />
               <span className="hide-on-mobile">Notionで開く</span>
+              <span className="show-on-mobile" style={{ display: 'none' }}>Notion</span>
             </a>
           )}
 
@@ -305,6 +306,7 @@ export function PostCard({
               style={{ color: commentsCount > 0 || showComments ? 'var(--accent-primary)' : undefined }}
             />
             <span className="hide-on-mobile">返信一覧</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>返信</span>
             {commentsCount > 0 && <span>({commentsCount})</span>}
           </button>
 
@@ -336,6 +338,7 @@ export function PostCard({
           >
             <MessageSquarePlus size={13} />
             <span className="hide-on-mobile">返信</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>返信</span>
           </button>
         </div>
       </div>

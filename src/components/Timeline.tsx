@@ -95,7 +95,7 @@ export function Timeline({
         </h2>
 
         {/* ソート & フィルタ & 更新コントロール */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="timeline-controls-grid" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* フィルター開閉ボタン */}
           <button
             type="button"

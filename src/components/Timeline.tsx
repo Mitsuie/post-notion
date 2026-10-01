@@ -107,6 +107,7 @@ export function Timeline({
               color: isFilterPanelOpen || isFiltered ? 'var(--accent-primary)' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
               padding: '4px 8px',
+              minHeight: '34px',
               fontSize: '0.75rem',
               fontWeight: isFiltered ? 600 : 500,
               display: 'flex',
@@ -119,6 +120,7 @@ export function Timeline({
           >
             <Filter size={12} />
             <span className="hide-on-mobile">フィルター</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>絞込</span>
             {activeFilterCount > 0 && <span>({activeFilterCount})</span>}
           </button>
 
@@ -133,6 +135,7 @@ export function Timeline({
               color: pinPriority ? 'var(--pinned-color)' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
               padding: '4px 8px',
+              minHeight: '34px',
               fontSize: '0.75rem',
               fontWeight: 500,
               display: 'flex',
@@ -145,6 +148,7 @@ export function Timeline({
           >
             <Pin size={12} style={{ fill: pinPriority ? 'currentColor' : 'none' }} />
             <span className="hide-on-mobile">固定優先: {pinPriority ? 'ON' : 'OFF'}</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>固定</span>
           </button>
 
           {/* 新しい順 / 古い順 切り替えボタン */}
@@ -158,6 +162,7 @@ export function Timeline({
               color: 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
               padding: '4px 8px',
+              minHeight: '34px',
               fontSize: '0.75rem',
               fontWeight: 500,
               display: 'flex',
@@ -170,11 +175,13 @@ export function Timeline({
           >
             {sortOrder === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
             <span className="hide-on-mobile">{sortOrder === 'desc' ? '新しい順' : '古い順'}</span>
+            <span className="show-on-mobile" style={{ display: 'none' }}>{sortOrder === 'desc' ? '新着' : '過去'}</span>
           </button>
 
           {/* 更新ボタン */}
           <button
             type="button"
+            className="mobile-icon-btn"
             onClick={onRefresh}
             disabled={isLoading || isRefreshing}
             style={{
@@ -183,6 +190,7 @@ export function Timeline({
               color: 'var(--text-secondary)',
               cursor: isLoading || isRefreshing ? 'not-allowed' : 'pointer',
               padding: '4px 8px',
+              minHeight: '34px',
               borderRadius: 'var(--radius-sm)',
               display: 'flex',
               alignItems: 'center',

@@ -10,6 +10,7 @@ import { Timeline } from './components/Timeline';
 import { Logo } from './components/Logo';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { useSystemStatus } from './hooks/useSystemStatus';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import type { CreatePostInput } from './types';
@@ -276,6 +277,9 @@ export default function App() {
           onTogglePin={handleTogglePin}
         />
       </main>
+
+      {/* ページ上部へ戻るボタン */}
+      <ScrollToTopButton />
     </div>
   );
 }

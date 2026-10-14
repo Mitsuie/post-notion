@@ -179,6 +179,9 @@ NOTION_POSTS_DATABASE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 # タグ管理データベースID (任意 / 32桁の英数字)
 NOTION_TAGS_DATABASE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
+# タグの選択上限 (任意 / タグのリレーションを1件に制限している場合は 1 を指定。未指定時は無制限)
+NOTION_TAGS_LIMIT=""
+
 # 日報データベースID (任意 / 日報連携機能を使用する場合)
 NOTION_DAILY_REPORT_DATABASE_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```

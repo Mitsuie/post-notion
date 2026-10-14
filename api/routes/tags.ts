@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Bindings, TagItem } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
-import { detectTagRelationLimit } from '../utils/probe.ts';
+import { parseTagsLimit } from '../utils/notion.ts';
 
 export const tagsRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -43,13 +43,7 @@ tagsRouter.get('/', async (c) => {
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'ja', { numeric: true }));
 
-    const limit = await detectTagRelationLimit(
-      env,
-      notion,
-      tags.map((t) => t.id)
-    );
-
-    return c.json({ tags, configured: true, limit });
+    return c.json({ tags, configured: true, limit: parseTagsLimit(env.NOTION_TAGS_LIMIT) });
   } catch (error: any) {
     console.error('Failed to fetch tags from Notion:', error);
     return c.json(

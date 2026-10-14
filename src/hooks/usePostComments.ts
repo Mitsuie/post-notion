@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { PostComment, CreateCommentInput, Post } from '../types';
+import type { PostComment, CreateCommentInput } from '../types';
 import { apiFetch } from '../utils/apiClient';
+import { POSTS_QUERY_KEY, updatePost, snapshotPosts, restorePosts } from '../utils/postsCache';
 
 export function usePostComments(postId: string | null) {
   const queryClient = useQueryClient();
@@ -18,14 +19,7 @@ export function usePostComments(postId: string | null) {
       // ハイブリッド補正: 取得した最新の実数カウントをタイムライン投稿キャッシュに即時反映
       if (typeof data.commentsCount === 'number') {
         const actualCount = data.commentsCount;
-        queryClient.setQueryData<{ posts: Post[] }>(['posts'], (old) => {
-          if (!old) return old;
-          return {
-            posts: old.posts.map((p) =>
-              p.id === postId ? { ...p, commentsCount: actualCount } : p
-            ),
-          };
-        });
+        updatePost(queryClient, postId, (p) => ({ ...p, commentsCount: actualCount }));
       }
 
       return data;
@@ -51,13 +45,13 @@ export function useCreateComment(postId: string) {
     },
     onMutate: async (newCommentInput) => {
       await queryClient.cancelQueries({ queryKey: ['post-comments', postId] });
-      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
 
       const previousComments = queryClient.getQueryData<{ comments: PostComment[] }>([
         'post-comments',
         postId,
       ]);
-      const previousPosts = queryClient.getQueryData<{ posts: Post[] }>(['posts']);
+      const postsSnapshot = snapshotPosts(queryClient);
 
       // 楽観的更新（0秒で画面に反映）
       const optimisticComment: PostComment = {
@@ -80,40 +74,27 @@ export function useCreateComment(postId: string) {
       });
 
       // タイムラインの投稿カード上のコメント数も即座に+1（楽観的インクリメント）
-      if (previousPosts) {
-        queryClient.setQueryData<{ posts: Post[] }>(['posts'], {
-          posts: previousPosts.posts.map((p) =>
-            p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p
-          ),
-        });
-      }
+      updatePost(queryClient, postId, (p) => ({ ...p, commentsCount: (p.commentsCount || 0) + 1 }));
 
-      return { previousComments, previousPosts };
+      return { previousComments, postsSnapshot };
     },
     onError: (_err, _newInput, context) => {
       if (context?.previousComments) {
         queryClient.setQueryData(['post-comments', postId], context.previousComments);
       }
-      if (context?.previousPosts) {
-        queryClient.setQueryData(['posts'], context.previousPosts);
+      if (context?.postsSnapshot) {
+        restorePosts(queryClient, context.postsSnapshot);
       }
     },
     onSuccess: (data) => {
       if (typeof data.commentsCount === 'number') {
         const newCount = data.commentsCount;
-        queryClient.setQueryData<{ posts: Post[] }>(['posts'], (old) => {
-          if (!old) return old;
-          return {
-            posts: old.posts.map((p) =>
-              p.id === postId ? { ...p, commentsCount: newCount } : p
-            ),
-          };
-        });
+        updatePost(queryClient, postId, (p) => ({ ...p, commentsCount: newCount }));
       }
     },
+    // コメント一覧のみ再検証する（件数は onSuccess と一覧取得時の queryFn で投稿キャッシュへ反映済み）
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['post-comments', postId] });
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 }

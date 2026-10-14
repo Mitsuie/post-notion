@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, ExternalLink, Calendar } from 'lucide-react';
 import type { Post, Tag } from '../types';
@@ -20,12 +20,8 @@ export function PostCard({
   const [showDetails, setShowDetails] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount ?? 0);
-
-  // 親から渡される post.commentsCount の変更をローカルstateに同期
-  useEffect(() => {
-    setCommentsCount(post.commentsCount ?? 0);
-  }, [post.commentsCount]);
+  // コメント件数は ['posts'] キャッシュの値を直接表示する（コメント取得・投稿時に postsCache 経由で更新される）
+  const commentsCount = post.commentsCount ?? 0;
 
   // 詳細展開時のみオンデマンドで本文Markdownを取得
   const { data: blocksData, isLoading: isBlocksLoading } = usePostBlocks(showDetails ? post.id : null);
@@ -310,7 +306,6 @@ export function PostCard({
         showReplyForm={showReplyForm}
         onOpenReplyForm={() => setShowReplyForm(true)}
         onCloseReplyForm={() => setShowReplyForm(false)}
-        onCommentsCountChange={setCommentsCount}
       />
     </article>
   );

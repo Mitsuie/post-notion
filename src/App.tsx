@@ -5,6 +5,7 @@ import { usePosts } from './hooks/usePosts';
 import { useTags } from './hooks/useTags';
 import { checkHasDraft } from './hooks/useDraft';
 import { clearCacheAndReload, reloadPage } from './utils/pwa';
+import { POSTS_QUERY_KEY } from './utils/postsCache';
 import { InputBar } from './components/InputBar';
 import { Timeline } from './components/Timeline';
 import { Logo } from './components/Logo';
@@ -131,7 +132,7 @@ export default function App() {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['posts'] }),
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: ['tags'] }),
       queryClient.invalidateQueries({ queryKey: ['system-status'] }),
     ]);

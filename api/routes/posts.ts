@@ -9,7 +9,12 @@ import type {
   CreateCommentPayload,
 } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
-import { findPropertyKey } from '../utils/notion.ts';
+import {
+  resolvePostsSchema,
+  getPostsSchema,
+  invalidateSchemaCache,
+  isValidationError,
+} from '../utils/schema.ts';
 import { parseMarkdownToNotionBlocks } from '../utils/markdownToNotion.ts';
 import { toRichText } from '../utils/richText.ts';
 import { chunk, CHILDREN_MAX } from '../utils/blocks.ts';
@@ -45,16 +50,14 @@ postsRouter.get('/', async (c) => {
 
     const posts: PostItem[] = response.results.map((page: any) => {
       const props = page.properties;
+      // ページのプロパティ定義から利用するプロパティ名を解決（API 呼び出しなし）
+      const { titleKey, tagsKey, pinnedKey, dailyReportKey, commentsCountKey } =
+        resolvePostsSchema(props);
 
-      // Title
-      const titleKey = findPropertyKey(props, ['Title', 'タイトル', '名前', 'Name'], 'title');
-      // 2,000 文字ごとに分割して保存したタイトルも全文表示できるよう、全要素を連結する
-      const title = titleKey
-        ? (props[titleKey]?.title || []).map((t: any) => t.plain_text).join('')
-        : '';
+      // Title（2,000 文字ごとに分割して保存したタイトルも全文表示できるよう、全要素を連結する）
+      const title = (props[titleKey]?.title || []).map((t: any) => t.plain_text).join('');
 
       // Tags (Relation)
-      const tagsKey = findPropertyKey(props, ['Tags', 'タグ'], 'relation');
       const tagRelations = tagsKey ? props[tagsKey]?.relation || [] : [];
       const tags = tagRelations.map((rel: { id: string }) => ({
         id: rel.id,
@@ -62,15 +65,9 @@ postsRouter.get('/', async (c) => {
       }));
 
       // Pinned
-      const pinnedKey = findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox');
       const pinned = pinnedKey ? !!props[pinnedKey]?.checkbox : false;
 
       // Daily Report (Relation)
-      const dailyReportKey = findPropertyKey(
-        props,
-        ['DB_日報', '日報', 'Daily Report', 'デイリー'],
-        'relation'
-      );
       const dailyRelations = dailyReportKey ? props[dailyReportKey]?.relation || [] : [];
       const dailyReport = dailyRelations.length > 0 ? { id: dailyRelations[0].id } : null;
 
@@ -82,11 +79,6 @@ postsRouter.get('/', async (c) => {
       };
 
       // Comments Count (Number)
-      const commentsCountKey = findPropertyKey(
-        props,
-        ['コメント追加回数', 'Comments Count', 'コメント数', 'comments_count'],
-        'number'
-      );
       const commentsCount =
         commentsCountKey && typeof props[commentsCountKey]?.number === 'number'
           ? props[commentsCountKey].number
@@ -132,16 +124,9 @@ postsRouter.post('/', async (c) => {
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
-    // データベーススキーマを取得してプロパティ名を自動解決
-    const db = await notion.databases.retrieve({ database_id: env.NOTION_POSTS_DATABASE_ID });
-    const props = db.properties;
-
-    const titleKey =
-      findPropertyKey(props, ['タイトル', '名前', 'Title', 'Name'], 'title') || 'タイトル';
-    const tagsKey = findPropertyKey(props, ['タグ', 'Tags'], 'relation') || 'タグ';
-    const pinnedKey =
-      findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox') ||
-      'ピン止め';
+    // データベースのプロパティ名を解決（5分間キャッシュ）
+    const { titleKey, tagsKey, pinnedKey, dailyReportKey, commentsCountKey } =
+      await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID);
 
     const sanitizedTitle = payload.title.replace(/[\r\n]+/g, ' ').trim();
 
@@ -152,14 +137,14 @@ postsRouter.post('/', async (c) => {
     };
 
     // タグリレーション設定
-    if (payload.tagIds && payload.tagIds.length > 0 && props[tagsKey]) {
+    if (payload.tagIds && payload.tagIds.length > 0 && tagsKey) {
       properties[tagsKey] = {
         relation: payload.tagIds.map((id) => ({ id })),
       };
     }
 
     // ピン留め設定
-    if (typeof payload.pinned === 'boolean' && props[pinnedKey]) {
+    if (typeof payload.pinned === 'boolean' && pinnedKey) {
       properties[pinnedKey] = {
         checkbox: payload.pinned,
       };
@@ -181,11 +166,8 @@ postsRouter.post('/', async (c) => {
       );
 
       if (dailyResult.dailyPageId) {
-        const dailyRelKey =
-          findPropertyKey(props, ['DB_日報', '日報', 'Daily Report', 'デイリー'], 'relation') ||
-          'DB_日報';
-        if (props[dailyRelKey]) {
-          properties[dailyRelKey] = {
+        if (dailyReportKey) {
+          properties[dailyReportKey] = {
             relation: [{ id: dailyResult.dailyPageId }],
           };
           dailyReportLinked = true;
@@ -196,11 +178,6 @@ postsRouter.post('/', async (c) => {
     }
 
     // コメント追加回数の初期化（0）
-    const commentsCountKey = findPropertyKey(
-      props,
-      ['コメント追加回数', 'Comments Count', 'コメント数', 'comments_count'],
-      'number'
-    );
     if (commentsCountKey) {
       properties[commentsCountKey] = {
         number: 0,
@@ -241,6 +218,8 @@ postsRouter.post('/', async (c) => {
     });
   } catch (error: any) {
     console.error('Failed to create post in Notion:', error);
+    // Notion 側でプロパティ名が変更された可能性があるため、次回はスキーマを取得し直す
+    if (isValidationError(error)) invalidateSchemaCache(env.NOTION_POSTS_DATABASE_ID);
     const errMsg = error?.message || String(error);
     if (
       errMsg.includes('limit of 1') ||
@@ -275,14 +254,10 @@ postsRouter.patch('/:id', async (c) => {
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
-    const db = await notion.databases.retrieve({ database_id: env.NOTION_POSTS_DATABASE_ID });
-    const props = db.properties;
-    const pinnedKey =
-      findPropertyKey(props, ['ピン止め', 'ピン留め', '固定', 'Pinned'], 'checkbox') ||
-      'ピン止め';
+    const { pinnedKey } = await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID);
 
     const properties: Record<string, any> = {};
-    if (typeof payload.pinned === 'boolean' && props[pinnedKey]) {
+    if (typeof payload.pinned === 'boolean' && pinnedKey) {
       properties[pinnedKey] = {
         checkbox: payload.pinned,
       };
@@ -301,6 +276,7 @@ postsRouter.patch('/:id', async (c) => {
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to update post ${id}:`, error);
+    if (isValidationError(error)) invalidateSchemaCache(env.NOTION_POSTS_DATABASE_ID);
     return c.json({ error: 'Failed to update post', message: errMsg }, 500);
   }
 });

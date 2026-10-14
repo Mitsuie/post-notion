@@ -9,7 +9,7 @@
  */
 export function findPropertyKey(
   properties: Record<string, any>,
-  candidateNames: string[],
+  candidateNames: readonly string[],
   type: string
 ): string | undefined {
   // 1. 完全一致（大文字小文字無視）

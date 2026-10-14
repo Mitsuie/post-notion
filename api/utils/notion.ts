@@ -24,6 +24,15 @@ export function findPropertyKey(
 }
 
 /**
+ * 環境変数 NOTION_TAGS_LIMIT からタグリレーションの選択上限を解決するヘルパー
+ * - 正の整数のみ有効。未指定・不正値は null（無制限）として扱う
+ */
+export function parseTagsLimit(raw?: string): number | null {
+  const n = Number.parseInt(raw?.trim() ?? '', 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/**
  * Post-Notion で利用される DB_Post-Notion のプロパティ定義一覧
  */
 export const POSTS_DB_USED_PROPERTY_DEFINITIONS = [

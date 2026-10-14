@@ -31,6 +31,13 @@ export interface Post {
   isOptimistic?: boolean; // 楽観的更新フラグ
 }
 
+// GET /api/posts の1ページ分のレスポンス
+export interface PostsPage {
+  posts: Post[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 export interface CreatePostInput {
   title: string;
   body?: string;

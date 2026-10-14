@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Bindings, TagItem } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
-import { parseTagsLimit } from '../utils/notion.ts';
+import { parseTagsLimit, queryAll } from '../utils/notion.ts';
 
 export const tagsRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -22,12 +22,10 @@ tagsRouter.get('/', async (c) => {
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
-    const response = await notion.databases.query({
-      database_id: env.NOTION_TAGS_DATABASE_ID,
-      page_size: 100,
-    });
+    // 100 件を超えるタグも取得できるよう、全ページを取得する
+    const results = await queryAll(notion, { database_id: env.NOTION_TAGS_DATABASE_ID });
 
-    const tags: TagItem[] = response.results
+    const tags: TagItem[] = results
       .map((page: any) => {
         // タイトルプロパティの探索 (Name, 名前, Title, タイトル等に柔軟に対応)
         const titlePropKey = Object.keys(page.properties).find(

@@ -1,6 +1,35 @@
 /**
  * Notion API関連の共通ユーティリティ
  */
+import type { Client } from '@notionhq/client';
+import type {
+  QueryDatabaseParameters,
+  QueryDatabaseResponse,
+} from '@notionhq/client/build/src/api-endpoints';
+
+/**
+ * databases.query を has_more がなくなるまで繰り返し、全件を取得するヘルパー
+ * - 1 ページ 100 件 × 最大 maxPages ページ（既定 10 ページ = 1,000 件）で打ち切る安全弁付き
+ */
+export async function queryAll(
+  notion: Pick<Client, 'databases'>,
+  args: Omit<QueryDatabaseParameters, 'start_cursor' | 'page_size'>,
+  maxPages: number = 10
+): Promise<QueryDatabaseResponse['results']> {
+  const results: QueryDatabaseResponse['results'] = [];
+  let cursor: string | undefined = undefined;
+  for (let i = 0; i < maxPages; i++) {
+    const response: QueryDatabaseResponse = await notion.databases.query({
+      ...args,
+      start_cursor: cursor,
+      page_size: 100,
+    });
+    results.push(...response.results);
+    if (!response.has_more || !response.next_cursor) break;
+    cursor = response.next_cursor;
+  }
+  return results;
+}
 
 /**
  * Notion データベースのプロパティキーを候補名と型から自動検出するヘルパー

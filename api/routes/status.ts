@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Bindings } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
-import { filterUsedPostsProperties } from '../utils/notion.ts';
+import { filterUsedPostsProperties, queryAll } from '../utils/notion.ts';
 
 export const statusRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -80,18 +80,15 @@ statusRouter.get('/', async (c) => {
       });
       const title = db.title?.map((t: any) => t.plain_text).join('') || 'タグDB';
 
-      // 登録タグ件数を取得
-      const queryRes = await notion.databases.query({
-        database_id: env.NOTION_TAGS_DATABASE_ID,
-        page_size: 100,
-      });
+      // 登録タグ件数を取得（100 件を超える場合も全ページを数える）
+      const tagPages = await queryAll(notion, { database_id: env.NOTION_TAGS_DATABASE_ID });
 
       return {
         connected: true,
         configured: true,
         title,
         idMasked: maskId(env.NOTION_TAGS_DATABASE_ID),
-        tagsCount: queryRes.results.length,
+        tagsCount: tagPages.length,
         accessible: true,
       };
     })(),

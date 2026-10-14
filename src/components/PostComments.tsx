@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Send, X, User, Loader2 } from 'lucide-react';
@@ -13,7 +13,6 @@ interface PostCommentsProps {
   showReplyForm: boolean;
   onOpenReplyForm: () => void;
   onCloseReplyForm: () => void;
-  onCommentsCountChange?: (count: number) => void;
 }
 
 /**
@@ -27,7 +26,6 @@ export function PostComments({
   showReplyForm,
   onOpenReplyForm,
   onCloseReplyForm,
-  onCommentsCountChange,
 }: PostCommentsProps) {
   const [replyText, setReplyText] = useState('');
 
@@ -41,13 +39,6 @@ export function PostComments({
   const createCommentMutation = useCreateComment(postId);
 
   const commentsList = commentsData?.comments || [];
-
-  // コメント数が取得できたら親コンポーネントへ通知してバッジを同期
-  useEffect(() => {
-    if (commentsData?.comments) {
-      onCommentsCountChange?.(commentsData.comments.length);
-    }
-  }, [commentsData?.comments, onCommentsCountChange]);
 
   // コメント（返信）送信ハンドラ
   const handleReplySubmit = (e?: FormEvent) => {

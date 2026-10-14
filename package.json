@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "pages:dev": "wrangler pages dev --compatibility-date=2024-01-01",
     "server:dev": "tsx watch server/index.ts",
     "server:start": "tsx server/index.ts",
@@ -33,6 +35,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5.6.3",
     "vite": "^5.4.9",
+    "vitest": "^3.2.7",
     "wrangler": "^3.80.0"
   }
 }

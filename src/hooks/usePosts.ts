@@ -1,15 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Post, CreatePostInput } from '../types';
 import { apiFetch } from '../utils/apiClient';
+import {
+  POSTS_QUERY_KEY,
+  type PostsData,
+  prependPost,
+  updatePost,
+  snapshotPosts,
+  restorePosts,
+} from '../utils/postsCache';
 
 export function usePosts() {
   const queryClient = useQueryClient();
 
   // タイムライン一覧取得
-  const postsQuery = useQuery<{ posts: Post[] }>({
-    queryKey: ['posts'],
+  const postsQuery = useQuery<PostsData>({
+    queryKey: POSTS_QUERY_KEY,
     queryFn: async () => {
-      return apiFetch<{ posts: Post[] }>('/api/posts');
+      return apiFetch<PostsData>('/api/posts');
     },
     staleTime: 1000 * 60 * 5, // 5分間キャッシュ
   });
@@ -26,44 +34,40 @@ export function usePosts() {
     // 楽観的更新: 送信直後に仮データをタイムライン先頭へ挿入
     onMutate: async (newPostInput) => {
       // 進行中のフェッチをキャンセル
-      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
 
       // 前の状態をスナップショット保存
-      const previousData = queryClient.getQueryData<{ posts: Post[] }>(['posts']);
+      const snapshot = snapshotPosts(queryClient);
 
-      if (previousData) {
-        const tempId = `temp-${Date.now()}`;
-        const optimisticPost: Post = {
-          id: tempId,
-          title: newPostInput.title,
-          createdTime: new Date().toISOString(),
-          createdBy: {
-            id: 'current-user',
-            name: 'あなた',
-          },
-          tags: (newPostInput.tagIds || []).map((id) => ({ id })),
-          pinned: !!newPostInput.pinned,
-          commentsCount: 0,
-          isOptimistic: true, // 送信中フラグ
-        };
+      const tempId = `temp-${Date.now()}`;
+      const optimisticPost: Post = {
+        id: tempId,
+        title: newPostInput.title,
+        createdTime: new Date().toISOString(),
+        createdBy: {
+          id: 'current-user',
+          name: 'あなた',
+        },
+        tags: (newPostInput.tagIds || []).map((id) => ({ id })),
+        pinned: !!newPostInput.pinned,
+        commentsCount: 0,
+        isOptimistic: true, // 送信中フラグ
+      };
 
-        // ピン止めを考慮してタイムライン先頭または適切な位置に挿入
-        queryClient.setQueryData<{ posts: Post[] }>(['posts'], {
-          posts: [optimisticPost, ...previousData.posts],
-        });
-      }
+      // タイムライン先頭へ挿入（一覧が未取得の場合は何もしない）
+      prependPost(queryClient, optimisticPost);
 
-      return { previousData };
+      return { snapshot };
     },
     // エラー時はロールバック
     onError: (_err, _newPost, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(['posts'], context.previousData);
+      if (context?.snapshot) {
+        restorePosts(queryClient, context.snapshot);
       }
     },
     // 成功・失敗に関わらず再検証して正規データと同期
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
     },
   });
 
@@ -77,26 +81,20 @@ export function usePosts() {
       });
     },
     onMutate: async ({ id, pinned }) => {
-      await queryClient.cancelQueries({ queryKey: ['posts'] });
-      const previousData = queryClient.getQueryData<{ posts: Post[] }>(['posts']);
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
+      const snapshot = snapshotPosts(queryClient);
 
-      if (previousData) {
-        queryClient.setQueryData<{ posts: Post[] }>(['posts'], {
-          posts: previousData.posts.map((post) =>
-            post.id === id ? { ...post, pinned } : post
-          ),
-        });
-      }
+      updatePost(queryClient, id, (post) => ({ ...post, pinned }));
 
-      return { previousData };
+      return { snapshot };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(['posts'], context.previousData);
+      if (context?.snapshot) {
+        restorePosts(queryClient, context.snapshot);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
     },
   });
 

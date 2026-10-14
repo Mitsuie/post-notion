@@ -31,9 +31,10 @@ export function updatePost(qc: QueryClient, id: string, updater: (post: Post) =>
   });
 }
 
-// 投稿を一覧の先頭（1ページ目の先頭）に挿入する（キャッシュ未取得の場合は何もしない）
+// 投稿を現在表示中の一覧の先頭（1ページ目の先頭）に挿入する（キャッシュ未取得の場合は何もしない）
+// - 条件の異なる非表示のキャッシュには挿入せず、投稿後の再取得で正規化する
 export function prependPost(qc: QueryClient, post: Post): void {
-  qc.setQueriesData<PostsData>({ queryKey: POSTS_QUERY_KEY }, (old) => {
+  qc.setQueriesData<PostsData>({ queryKey: POSTS_QUERY_KEY, type: 'active' }, (old) => {
     if (!old || old.pages.length === 0) return old;
     return mapPages(old, (posts, i) => (i === 0 ? [post, ...posts] : posts));
   });

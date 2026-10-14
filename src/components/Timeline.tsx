@@ -9,38 +9,29 @@ import {
   Filter,
   ChevronsDown,
 } from 'lucide-react';
-import type { Post, Tag } from '../types';
+import type { Tag } from '../types';
 import { PostCard } from './PostCard';
 import { TimelineFilterModal } from './TimelineFilterModal';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { useTimelineFilter, DEFAULT_FILTER } from '../hooks/useTimelineFilter';
+import { usePostsQuery } from '../hooks/usePosts';
 
 export type { DatePreset, FilterState } from '../hooks/useTimelineFilter';
 
 interface TimelineProps {
-  posts: Post[];
   availableTags: Tag[];
   isTagsConfigured?: boolean;
-  isLoading: boolean;
   onRefresh: () => void;
   isRefreshing?: boolean;
   onTogglePin?: (id: string, pinned: boolean) => void;
-  hasNextPage?: boolean;
-  isFetchingNextPage?: boolean;
-  onLoadMore?: () => void;
 }
 
 export function Timeline({
-  posts,
   availableTags,
   isTagsConfigured = true,
-  isLoading,
   onRefresh,
   isRefreshing,
   onTogglePin,
-  hasNextPage = false,
-  isFetchingNextPage = false,
-  onLoadMore,
 }: TimelineProps) {
   // ソート設定（localStorageに保存して記憶）
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>(() => {
@@ -69,15 +60,18 @@ export function Timeline({
     isTagFiltered,
     isFiltered,
     activeFilterCount,
-    filteredAndSortedPosts,
+    queryParams,
     dateFilterLabel,
     handleToggleTag,
   } = useTimelineFilter({
-    posts,
     availableTags,
     sortOrder,
     pinPriority,
   });
+
+  // 絞り込み・並べ替え済みの投稿一覧をサーバーから取得
+  const { posts, isLoading, isPlaceholderData, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    usePostsQuery(queryParams);
 
   return (
     <section>
@@ -96,21 +90,7 @@ export function Timeline({
           タイムライン
           {posts.length > 0 && (
             <span style={{ fontSize: '0.8rem', marginLeft: '6px', color: 'var(--text-muted)' }}>
-              (表示 {filteredAndSortedPosts.length} 件（読み込み済み {posts.length} 件）)
-            </span>
-          )}
-          {/* 未読み込みの投稿がある間は、絞り込みが読み込み済みの範囲に限られることを明示 */}
-          {hasNextPage && isFiltered && (
-            <span
-              style={{
-                display: 'block',
-                fontSize: '0.72rem',
-                fontWeight: 400,
-                marginTop: '2px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              ※ 読み込み済みの範囲で絞り込み中
+              ({posts.length} 件表示{hasNextPage ? '・さらに読み込めます' : ''})
             </span>
           )}
         </h2>
@@ -266,7 +246,7 @@ export function Timeline({
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
           <Loader2 size={24} className="animate-spin" />
         </div>
-      ) : filteredAndSortedPosts.length === 0 ? (
+      ) : posts.length === 0 ? (
         /* Empty State */
         <div
           className="glass"
@@ -277,7 +257,7 @@ export function Timeline({
             color: 'var(--text-muted)',
           }}
         >
-          {isFiltered && posts.length > 0 ? (
+          {isFiltered ? (
             /* フィルターによる該当なし */
             <>
               <Filter size={36} style={{ margin: '0 auto 12px', opacity: 0.5, color: 'var(--accent-primary)' }} />
@@ -346,9 +326,9 @@ export function Timeline({
           )}
         </div>
       ) : (
-        /* 投稿カード一覧（フラットタイムライン表示） */
-        <div>
-          {filteredAndSortedPosts.map((post) => (
+        /* 投稿カード一覧（フラットタイムライン表示。条件切り替え中は直前の結果を薄く表示） */
+        <div style={{ opacity: isPlaceholderData ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
+          {posts.map((post) => (
             <PostCard
               key={post.id}
               post={post}
@@ -364,7 +344,7 @@ export function Timeline({
         <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 16px' }}>
           <button
             type="button"
-            onClick={onLoadMore}
+            onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
             style={{
               display: 'inline-flex',

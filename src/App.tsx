@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, X, Menu } from 'lucide-react';
-import { usePosts } from './hooks/usePosts';
+import { usePostMutations } from './hooks/usePosts';
 import { useTags } from './hooks/useTags';
 import { checkHasDraft } from './hooks/useDraft';
 import { clearCacheAndReload, reloadPage } from './utils/pwa';
@@ -24,16 +24,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 export default function App() {
   const queryClient = useQueryClient();
-  const {
-    posts,
-    isLoading: isPostsLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    createPost,
-    isCreating,
-    togglePin,
-  } = usePosts();
+  const { createPost, isCreating, togglePin } = usePostMutations();
   const { data: tagsData } = useTags();
   const {
     isDailyReportConfigured,
@@ -277,16 +268,11 @@ export default function App() {
 
         {/* タイムライン */}
         <Timeline
-          posts={posts}
           availableTags={tags}
           isTagsConfigured={isTagsAccessible}
-          isLoading={isPostsLoading}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
           onTogglePin={handleTogglePin}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          onLoadMore={() => fetchNextPage()}
         />
       </main>
 

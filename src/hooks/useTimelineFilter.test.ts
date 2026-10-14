@@ -1,91 +1,99 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { matchesDateFilter, matchesTagFilter, DEFAULT_FILTER, type FilterState } from './useTimelineFilter';
+import { describe, it, expect } from 'vitest';
+import { toPostsQueryParams, DEFAULT_FILTER, type FilterState } from './useTimelineFilter';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-// タイムゾーンに依存しないよう、現在時刻はローカル時刻で固定する
-const NOW = new Date(2026, 9, 14, 12, 0, 0);
+// タイムゾーンに依存しないよう、現在時刻・期待値ともローカル時刻で組み立てる
+const NOW = new Date(2026, 9, 14, 12, 34, 56);
 
 function filterOf(patch: Partial<FilterState>): FilterState {
   return { ...DEFAULT_FILTER, ...patch };
 }
 
-function iso(date: Date | number): string {
-  return new Date(date).toISOString();
+function localIso(...args: [number, number, number, number?, number?, number?, number?]): string {
+  const [y, m, d, h = 0, mi = 0, s = 0, ms = 0] = args;
+  return new Date(y, m, d, h, mi, s, ms).toISOString();
 }
 
-describe('matchesDateFilter', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(NOW);
+describe('toPostsQueryParams', () => {
+  it('all は日付条件を付けない', () => {
+    expect(toPostsQueryParams(filterOf({ datePreset: 'all' }), 'desc', true, NOW)).toEqual({
+      order: 'desc',
+      pin: '1',
+    });
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it('today はローカル日付の 0:00 以降', () => {
+    expect(toPostsQueryParams(filterOf({ datePreset: 'today' }), 'desc', false, NOW).from).toBe(
+      localIso(2026, 9, 14)
+    );
   });
 
-  it('all はすべて一致する', () => {
-    expect(matchesDateFilter(iso(new Date(2000, 0, 1)), filterOf({ datePreset: 'all' }))).toBe(true);
+  it('7d / 30d は N 日前の 0:00 以降（現在時刻ではなく日付単位に丸める）', () => {
+    expect(toPostsQueryParams(filterOf({ datePreset: '7d' }), 'desc', false, NOW).from).toBe(
+      localIso(2026, 9, 7)
+    );
+    expect(toPostsQueryParams(filterOf({ datePreset: '30d' }), 'desc', false, NOW).from).toBe(
+      localIso(2026, 8, 14)
+    );
   });
 
-  it('today はローカル日付の 0:00 以降のみ一致する', () => {
-    const todayStart = new Date(2026, 9, 14, 0, 0, 0).getTime();
-    const filter = filterOf({ datePreset: 'today' });
-    expect(matchesDateFilter(iso(todayStart), filter)).toBe(true);
-    expect(matchesDateFilter(iso(todayStart - 1), filter)).toBe(false);
-  });
-
-  it('7d は現在時刻から7日前以降のみ一致する', () => {
+  it('同じ日のうちは現在時刻が変わっても同じ条件になる（キャッシュが効く）', () => {
     const filter = filterOf({ datePreset: '7d' });
-    expect(matchesDateFilter(iso(NOW.getTime() - 7 * DAY_MS), filter)).toBe(true);
-    expect(matchesDateFilter(iso(NOW.getTime() - 7 * DAY_MS - 1), filter)).toBe(false);
+    const morning = toPostsQueryParams(filter, 'desc', true, new Date(2026, 9, 14, 0, 0, 1));
+    const night = toPostsQueryParams(filter, 'desc', true, new Date(2026, 9, 14, 23, 59, 59));
+    expect(morning).toEqual(night);
   });
 
-  it('30d は現在時刻から30日前以降のみ一致する', () => {
-    const filter = filterOf({ datePreset: '30d' });
-    expect(matchesDateFilter(iso(NOW.getTime() - 30 * DAY_MS), filter)).toBe(true);
-    expect(matchesDateFilter(iso(NOW.getTime() - 30 * DAY_MS - 1), filter)).toBe(false);
+  it('月をまたぐ日付も正しく計算する', () => {
+    expect(
+      toPostsQueryParams(filterOf({ datePreset: '7d' }), 'desc', false, new Date(2026, 2, 3, 9)).from
+    ).toBe(localIso(2026, 1, 24));
   });
 
-  it('custom の開始日は 00:00 を含む', () => {
-    const filter = filterOf({ datePreset: 'custom', customStartDate: '2026-10-01' });
-    const start = new Date(2026, 9, 1, 0, 0, 0).getTime();
-    expect(matchesDateFilter(iso(start), filter)).toBe(true);
-    expect(matchesDateFilter(iso(start - 1), filter)).toBe(false);
+  it('custom は開始日の 00:00 と終了日の 23:59:59.999 を含む', () => {
+    const params = toPostsQueryParams(
+      filterOf({ datePreset: 'custom', customStartDate: '2026-10-01', customEndDate: '2026-10-10' }),
+      'desc',
+      false,
+      NOW
+    );
+    expect(params.from).toBe(localIso(2026, 9, 1));
+    expect(params.to).toBe(localIso(2026, 9, 10, 23, 59, 59, 999));
   });
 
-  it('custom の終了日は 23:59:59.999 を含む', () => {
-    const filter = filterOf({ datePreset: 'custom', customEndDate: '2026-10-10' });
-    const end = new Date(2026, 9, 10, 23, 59, 59, 999).getTime();
-    expect(matchesDateFilter(iso(end), filter)).toBe(true);
-    expect(matchesDateFilter(iso(end + 1), filter)).toBe(false);
+  it('custom で片方のみ指定した場合はその条件のみ', () => {
+    const onlyEnd = toPostsQueryParams(
+      filterOf({ datePreset: 'custom', customEndDate: '2026-10-10' }),
+      'desc',
+      false,
+      NOW
+    );
+    expect(onlyEnd.from).toBeUndefined();
+    expect(onlyEnd.to).toBe(localIso(2026, 9, 10, 23, 59, 59, 999));
   });
 
-  it('custom で開始日・終了日の両方を指定すると範囲内のみ一致する', () => {
-    const filter = filterOf({ datePreset: 'custom', customStartDate: '2026-10-01', customEndDate: '2026-10-10' });
-    expect(matchesDateFilter(iso(new Date(2026, 9, 5, 9, 0)), filter)).toBe(true);
-    expect(matchesDateFilter(iso(new Date(2026, 8, 30, 9, 0)), filter)).toBe(false);
-    expect(matchesDateFilter(iso(new Date(2026, 9, 11, 9, 0)), filter)).toBe(false);
+  it('custom で不正な日付は無視する', () => {
+    const params = toPostsQueryParams(
+      filterOf({ datePreset: 'custom', customStartDate: 'invalid' }),
+      'desc',
+      false,
+      NOW
+    );
+    expect(params.from).toBeUndefined();
   });
 
-  it('custom で日付が未指定ならすべて一致する', () => {
-    expect(matchesDateFilter(iso(new Date(2000, 0, 1)), filterOf({ datePreset: 'custom' }))).toBe(true);
-  });
-});
-
-describe('matchesTagFilter', () => {
-  const postTags = [{ id: 'a' }, { id: 'b' }];
-
-  it('タグ未選択ならすべて一致する', () => {
-    expect(matchesTagFilter([], [])).toBe(true);
-    expect(matchesTagFilter(postTags, [])).toBe(true);
+  it('タグは並べ替えてカンマ区切りにする（選択順に依存しない）', () => {
+    const a = toPostsQueryParams(filterOf({ selectedTagIds: ['t2', 't1'] }), 'desc', false, NOW);
+    const b = toPostsQueryParams(filterOf({ selectedTagIds: ['t1', 't2'] }), 'desc', false, NOW);
+    expect(a.tags).toBe('t1,t2');
+    expect(a).toEqual(b);
   });
 
-  it('選択タグのいずれかを含めば一致する（OR 条件）', () => {
-    expect(matchesTagFilter(postTags, ['x', 'b'])).toBe(true);
+  it('タグ未選択なら tags を付けない', () => {
+    expect(toPostsQueryParams(filterOf({ selectedTagIds: [] }), 'desc', false, NOW).tags).toBeUndefined();
   });
 
-  it('選択タグを1つも含まなければ一致しない', () => {
-    expect(matchesTagFilter(postTags, ['x', 'y'])).toBe(false);
-    expect(matchesTagFilter([], ['a'])).toBe(false);
+  it('並び順とピン留め優先を反映する', () => {
+    expect(toPostsQueryParams(DEFAULT_FILTER, 'asc', false, NOW)).toMatchObject({ order: 'asc', pin: '0' });
+    expect(toPostsQueryParams(DEFAULT_FILTER, 'desc', true, NOW)).toMatchObject({ order: 'desc', pin: '1' });
   });
 });

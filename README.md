@@ -215,6 +215,14 @@ npm run serve
 - フロントエンドのビルド（`npm run build`）と Node サーバー（`server/index.ts`）の起動を一括実行します。
 - `http://localhost:3000` で起動します。
 
+#### D. 単体テスト（Vitest）
+```bash
+npm test            # 1回実行
+npm run test:watch  # ファイル変更を監視して再実行
+```
+- テストは対象ファイルと同じ階層に `*.test.ts` として配置します（`src/` と `api/` が対象）。
+- Pull Request 作成時と `main` への push 時に、GitHub Actions で型チェック・テスト・ビルドが実行されます。
+
 ---
 
 ### 6. 動作確認

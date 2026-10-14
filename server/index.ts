@@ -75,12 +75,22 @@ serverApp.get('*', (c) => {
 });
 
 // サーバー起動
+// 既定はループバック限定。LAN へ公開する場合のみシェルで HOST=0.0.0.0 を指定する
+// （.env は c.env 注入用に parse しているだけのため、.env に HOST を書いても反映されない）
 const port = Number(process.env.PORT) || 3000;
+const hostname = process.env.HOST || '127.0.0.1';
+const isLoopback = hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1';
 
-console.log(`🚀 Post-Notion Server running at http://localhost:${port}`);
+console.log(`🚀 Post-Notion Server running at http://${hostname}:${port}`);
 console.log(`📁 Static assets served from: ${distDir}`);
+if (!isLoopback) {
+  console.warn(
+    `⚠️  HOST=${hostname} で起動しています。LAN に公開中のため、同一ネットワークの端末から認証なしで Notion API を操作できます。`
+  );
+}
 
 serve({
   fetch: serverApp.fetch,
   port,
+  hostname,
 });

@@ -213,7 +213,8 @@ Cloudflare を介さず、Node.js サーバー単体で静的配信および API
 npm run serve
 ```
 - フロントエンドのビルド（`npm run build`）と Node サーバー（`server/index.ts`）の起動を一括実行します。
-- `http://localhost:3000` で起動します。
+- `http://127.0.0.1:3000` で起動します（既定ではループバックのみで待ち受け、他の端末からは接続できません）。
+- スマートフォン実機などから LAN 経由で確認する場合のみ、シェルで `HOST=0.0.0.0 npm run serve` と指定します。`HOST` は `.env` に書いても反映されません。
 
 #### D. 単体テスト（Vitest）
 ```bash
@@ -245,6 +246,16 @@ npm run test:watch  # ファイル変更を監視して再実行
 4. **環境変数の追加**:
    - `Settings` > `Environment variables` にて、`.dev.vars` に設定したキー（`NOTION_API_KEY`, `NOTION_POSTS_DATABASE_ID` 等）を `Production` および `Preview` に登録。
 5. デプロイ完了後、発行された `https://<project-name>.pages.dev` からアクセス可能になります。
+
+> [!WARNING]
+> **Preview デプロイも Access で保護してください。**  
+> Pages はブランチやコミットごとに `https://<hash>.<project-name>.pages.dev` の Preview URL を発行します。本番ドメインだけを Access の対象にしていると、Preview URL の `/api/*` から認証なしで Notion を読み書きできてしまいます。
+>
+> 1. シークレットウィンドウで既存の Preview URL の `/api/posts` を開き、Access のログイン画面に遷移するか確認します。
+> 2. 保護されていなければ、次のいずれかを設定します。
+>    - Pages プロジェクトの `Settings` > `General` > `Access policy` で Preview デプロイの保護を有効化
+>    - Zero Trust の Access アプリケーションに `*.<project-name>.pages.dev` を追加
+> 3. Preview で実データを使った確認をしない場合は、Preview 環境変数から Notion のシークレットを削除します。
 
 ---
 

@@ -11,6 +11,8 @@ import type {
 import { getNotionClient, validateEnv } from '../notion.ts';
 import { findPropertyKey } from '../utils/notion.ts';
 import { parseMarkdownToNotionBlocks } from '../utils/markdownToNotion.ts';
+import { toRichText } from '../utils/richText.ts';
+import { chunk, CHILDREN_MAX } from '../utils/blocks.ts';
 import { resolveDailyReportPageId } from '../utils/dailyReport.ts';
 import { syncCommentsCount, incrementCommentsCount } from '../utils/comments.ts';
 
@@ -46,7 +48,10 @@ postsRouter.get('/', async (c) => {
 
       // Title
       const titleKey = findPropertyKey(props, ['Title', 'タイトル', '名前', 'Name'], 'title');
-      const title = titleKey ? props[titleKey]?.title?.[0]?.plain_text || '' : '';
+      // 2,000 文字ごとに分割して保存したタイトルも全文表示できるよう、全要素を連結する
+      const title = titleKey
+        ? (props[titleKey]?.title || []).map((t: any) => t.plain_text).join('')
+        : '';
 
       // Tags (Relation)
       const tagsKey = findPropertyKey(props, ['Tags', 'タグ'], 'relation');
@@ -142,13 +147,7 @@ postsRouter.post('/', async (c) => {
 
     const properties: Record<string, any> = {
       [titleKey]: {
-        title: [
-          {
-            text: {
-              content: sanitizedTitle,
-            },
-          },
-        ],
+        title: toRichText(sanitizedTitle).richText,
       },
     };
 
@@ -208,26 +207,37 @@ postsRouter.post('/', async (c) => {
       };
     }
 
-    // Markdown本文をNotionネイティブ階層ブロック（children）へ変換
-    let children: any[] | undefined = undefined;
-    if (payload.body && payload.body.trim()) {
-      const parsed = parseMarkdownToNotionBlocks(payload.body);
-      if (parsed.length > 0) {
-        children = parsed;
-      }
-    }
+    // Markdown本文をNotionネイティブ階層ブロック（children）へ変換し、100件ずつに分割
+    const blockChunks =
+      payload.body && payload.body.trim()
+        ? chunk(parseMarkdownToNotionBlocks(payload.body), CHILDREN_MAX)
+        : [];
 
+    // ページ作成時は先頭の100件のみ渡す
     const createdPage = await notion.pages.create({
       parent: { database_id: env.NOTION_POSTS_DATABASE_ID },
       properties,
-      children,
+      children: blockChunks[0],
     });
+
+    // 残りのブロックは順番を保つため1件ずつ直列に追記する
+    // ページ作成後に追記が失敗しても 500 は返さない（入力復元→再送による投稿の重複を防ぐ）
+    const warnings: string[] = dailyReportWarning ? [dailyReportWarning] : [];
+    for (const children of blockChunks.slice(1)) {
+      try {
+        await notion.blocks.children.append({ block_id: createdPage.id, children });
+      } catch (appendError: unknown) {
+        console.error(`Failed to append blocks to post ${createdPage.id}:`, appendError);
+        warnings.push('本文の一部を Notion に追記できませんでした。Notion で確認してください。');
+        break;
+      }
+    }
 
     return c.json({
       success: true,
       id: createdPage.id,
       dailyReportLinked,
-      warning: dailyReportWarning,
+      warning: warnings.length > 0 ? warnings.join('\n') : undefined,
     });
   } catch (error: any) {
     console.error('Failed to create post in Notion:', error);
@@ -393,13 +403,7 @@ postsRouter.post('/:id/comments', async (c) => {
 
   try {
     const createArgs: any = {
-      rich_text: [
-        {
-          text: {
-            content: text,
-          },
-        },
-      ],
+      rich_text: toRichText(text).richText,
     };
 
     if (payload.discussionId) {

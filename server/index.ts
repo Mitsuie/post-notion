@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { app as apiApp } from '../api/app.ts';
+import { secureHeaders } from 'hono/secure-headers';
+import { app as apiApp, SECURE_HEADERS_OPTIONS } from '../api/app.ts';
 import type { Bindings } from '../api/types.ts';
 
 const cwd = process.cwd();
@@ -36,6 +37,9 @@ const __dirname = path.dirname(__filename);
 const distDir = path.resolve(__dirname, '../dist');
 
 const serverApp = new Hono<{ Bindings: Bindings }>();
+
+// 0. セキュリティ関連ヘッダー（静的ファイル・SPA フォールバックにも付与）
+serverApp.use('*', secureHeaders(SECURE_HEADERS_OPTIONS));
 
 // 1. 環境変数の注入（最新の .dev.vars / .env を c.env に透過的に注入）
 serverApp.use('*', async (c, next) => {

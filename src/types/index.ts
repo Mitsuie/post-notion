@@ -47,6 +47,15 @@ export interface CreatePostInput {
   clientDate?: string;
 }
 
+// POST /api/posts のレスポンス
+export interface CreatePostResult {
+  success: boolean;
+  id: string;
+  dailyReportLinked: boolean;
+  // 日報未連携・本文の一部追記失敗など、投稿自体は成功したが利用者に知らせたい内容
+  warning?: string;
+}
+
 export interface PostComment {
   id: string;
   discussionId: string;

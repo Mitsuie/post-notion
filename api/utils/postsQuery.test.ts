@@ -129,3 +129,17 @@ describe('normalizeId / readJson', async () => {
     expect(await readJson(req(async () => { throw new SyntaxError('bad'); }))).toBeNull();
   });
 });
+
+describe('キーワード検索（q）', () => {
+  it('前後の空白を除き、100 文字で切り詰める', () => {
+    expect(parsePostsQueryParams({ q: '  検索  ' }).q).toBe('検索');
+    expect(parsePostsQueryParams({ q: '   ' }).q).toBeUndefined();
+    expect(Array.from(parsePostsQueryParams({ q: 'あ'.repeat(150) }).q!)).toHaveLength(100);
+  });
+
+  it('タイトルの contains 条件を and に加える', () => {
+    const query = buildPostsQuery(params({ q: 'notion', tags: [TAG_A] }), { ...SCHEMA, titleKey: 'Name' })!;
+    expect(query.filter.and).toContainEqual({ property: 'Name', title: { contains: 'notion' } });
+    expect(query.filter.and).toHaveLength(2);
+  });
+});

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Loader2,
   Inbox,
@@ -13,7 +13,7 @@ import type { Tag } from '../types';
 import { PostCard } from './PostCard';
 import { TimelineFilterModal } from './TimelineFilterModal';
 import { ActiveFilterChips } from './ActiveFilterChips';
-import { useTimelineFilter, DEFAULT_FILTER } from '../hooks/useTimelineFilter';
+import { useTimelineFilter, DEFAULT_FILTER, CLEARED_FILTER } from '../hooks/useTimelineFilter';
 import { usePostsQuery } from '../hooks/usePosts';
 
 export type { DatePreset, FilterState } from '../hooks/useTimelineFilter';
@@ -58,6 +58,7 @@ export function Timeline({
     tagMap,
     isDateFiltered,
     isTagFiltered,
+    isKeywordFiltered,
     isFiltered,
     activeFilterCount,
     queryParams,
@@ -70,8 +71,21 @@ export function Timeline({
   });
 
   // 絞り込み・並べ替え済みの投稿一覧をサーバーから取得
-  const { posts, isLoading, isPlaceholderData, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    usePostsQuery(queryParams);
+  const {
+    posts: fetchedPosts,
+    isLoading,
+    isPlaceholderData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePostsQuery(queryParams);
+
+  // 楽観的に挿入した未確定の投稿は、キーワードに一致しなければ表示しない（確定後はサーバー側で絞り込み済み）
+  const posts = useMemo(() => {
+    const keyword = filter.keyword.trim().toLowerCase();
+    if (!keyword) return fetchedPosts;
+    return fetchedPosts.filter((p) => !p.isOptimistic || p.title.toLowerCase().includes(keyword));
+  }, [fetchedPosts, filter.keyword]);
 
   return (
     <section>
@@ -229,18 +243,17 @@ export function Timeline({
         dateFilterLabel={dateFilterLabel}
         selectedTagIds={filter.selectedTagIds}
         tagMap={tagMap}
+        keyword={isKeywordFiltered ? filter.keyword.trim() : ''}
+        onClearKeyword={() => setFilter((prev) => ({ ...prev, keyword: '' }))}
         onClearDateFilter={() => setFilter((prev) => ({ ...prev, datePreset: 'all' }))}
         onToggleTag={handleToggleTag}
         onResetDefault={() => setFilter(DEFAULT_FILTER)}
         onClearAll={() =>
-          setFilter({
-            datePreset: 'all',
-            customStartDate: '',
-            customEndDate: '',
-            selectedTagIds: [],
-          })
+          setFilter(CLEARED_FILTER)
         }
-        showResetDefault={filter.datePreset !== '30d' || filter.selectedTagIds.length > 0}
+        showResetDefault={
+          filter.datePreset !== '30d' || filter.selectedTagIds.length > 0 || isKeywordFiltered
+        }
       />
 
       {/* ローディング表示 */}
@@ -267,7 +280,9 @@ export function Timeline({
                 条件に一致する投稿が見つかりませんでした
               </p>
               <p style={{ fontSize: '0.8rem', marginBottom: '16px' }}>
-                {isDateFiltered && isTagFiltered
+                {isKeywordFiltered
+                  ? `「${filter.keyword.trim()}」をタイトルに含む投稿が、指定した条件の中にありません。`
+                  : isDateFiltered && isTagFiltered
                   ? '選択した期間内に、指定のタグが付いた投稿が存在しません。'
                   : isDateFiltered
                   ? '指定した期間内に作成された投稿がありません。'
@@ -277,12 +292,7 @@ export function Timeline({
                 <button
                   type="button"
                   onClick={() =>
-                    setFilter({
-                      datePreset: 'all',
-                      customStartDate: '',
-                      customEndDate: '',
-                      selectedTagIds: [],
-                    })
+                    setFilter(CLEARED_FILTER)
                   }
                   style={{
                     background: 'var(--accent-primary)',

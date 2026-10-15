@@ -1,7 +1,80 @@
+import { useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Filter, Calendar, Tag as TagIcon, X, Check, RotateCcw } from 'lucide-react';
+import { Filter, Calendar, Tag as TagIcon, X, Check, RotateCcw, Search } from 'lucide-react';
 import type { Tag } from '../types';
-import { DatePreset, FilterState, DEFAULT_FILTER } from '../hooks/useTimelineFilter';
+import {
+  DatePreset,
+  FilterState,
+  DEFAULT_FILTER,
+  CLEARED_FILTER,
+  MAX_KEYWORD_LENGTH,
+} from '../hooks/useTimelineFilter';
+
+// 入力が止まってから絞り込みに反映するまでの待ち時間（キー入力ごとの Notion 呼び出しを防ぐ）
+const KEYWORD_DEBOUNCE_MS = 300;
+
+/**
+ * タイトルのキーワード入力欄（入力は 300ms デバウンスしてから filter.keyword に反映する）
+ */
+function KeywordInput({ keyword, onChange }: { keyword: string; onChange: (keyword: string) => void }) {
+  const [value, setValue] = useState(keyword);
+
+  // チップからの解除など、外部で変更されたキーワードを入力欄に反映
+  useEffect(() => {
+    setValue(keyword);
+  }, [keyword]);
+
+  useEffect(() => {
+    if (value === keyword) return;
+    const timer = setTimeout(() => onChange(value), KEYWORD_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [value, keyword, onChange]);
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        background: 'var(--bg-tertiary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-sm)',
+        padding: '6px 8px',
+      }}
+    >
+      <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="タイトルに含む文字で検索..."
+        aria-label="タイトルのキーワード"
+        maxLength={MAX_KEYWORD_LENGTH}
+        className="input-comment"
+        style={{
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: 'var(--text-primary)',
+          width: '100%',
+        }}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => {
+            setValue('');
+            onChange('');
+          }}
+          aria-label="キーワードをクリア"
+          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}
+        >
+          <X size={13} aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 interface TimelineFilterModalProps {
   isOpen: boolean;
@@ -68,6 +141,18 @@ export function TimelineFilterModal({
         >
           <X size={15} />
         </button>
+      </div>
+
+      {/* セクション0: キーワード（タイトル）検索 */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Search size={12} />
+          <span>キーワード (タイトル)</span>
+        </div>
+        <KeywordInput
+          keyword={filter.keyword}
+          onChange={(keyword) => setFilter((prev) => ({ ...prev, keyword }))}
+        />
       </div>
 
       {/* セクション1: 作成日フィルター */}
@@ -300,12 +385,7 @@ export function TimelineFilterModal({
             type="button"
             className="text-btn-muted"
             onClick={() =>
-              setFilter({
-                datePreset: 'all',
-                customStartDate: '',
-                customEndDate: '',
-                selectedTagIds: [],
-              })
+              setFilter(CLEARED_FILTER)
             }
           >
             全条件をクリア

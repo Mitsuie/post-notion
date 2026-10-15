@@ -56,9 +56,9 @@ postsRouter.get('/', async (c) => {
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
-    // タグ・ピン留めの条件があるときのみプロパティ名を解決する（5分間キャッシュ）
+    // タグ・ピン留め・キーワードの条件があるときのみプロパティ名を解決する（5分間キャッシュ）
     const schema =
-      params.tags.length > 0 || params.pin
+      params.tags.length > 0 || params.pin || params.q
         ? await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID)
         : {};
     const query = buildPostsQuery(params, schema);

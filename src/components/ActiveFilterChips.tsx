@@ -1,4 +1,4 @@
-import { Filter, Calendar, Tag as TagIcon, X, RotateCcw } from 'lucide-react';
+import { Filter, Calendar, Tag as TagIcon, X, RotateCcw, Search } from 'lucide-react';
 
 interface ActiveFilterChipsProps {
   isFiltered: boolean;
@@ -6,6 +6,8 @@ interface ActiveFilterChipsProps {
   dateFilterLabel: string;
   selectedTagIds: string[];
   tagMap: Map<string, string>;
+  keyword?: string;
+  onClearKeyword?: () => void;
   onClearDateFilter: () => void;
   onToggleTag: (tagId: string) => void;
   onResetDefault: () => void;
@@ -19,6 +21,8 @@ export function ActiveFilterChips({
   dateFilterLabel,
   selectedTagIds,
   tagMap,
+  keyword = '',
+  onClearKeyword,
   onClearDateFilter,
   onToggleTag,
   onResetDefault,
@@ -78,6 +82,43 @@ export function ActiveFilterChips({
               alignItems: 'center',
             }}
             title="作成日フィルターを解除（全期間表示）"
+          >
+            <X size={11} />
+          </button>
+        </span>
+      )}
+
+      {/* キーワードチップ */}
+      {keyword && (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '2px 8px',
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--accent-light)',
+            color: 'var(--accent-primary)',
+            fontWeight: 500,
+            border: '1px solid rgba(var(--accent-primary-rgb, 59, 130, 246), 0.2)',
+          }}
+        >
+          <Search size={11} />
+          <span>キーワード: {keyword}</span>
+          <button
+            type="button"
+            onClick={onClearKeyword}
+            aria-label="キーワードの絞り込みを解除"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            title="キーワードの絞り込みを解除"
           >
             <X size={11} />
           </button>

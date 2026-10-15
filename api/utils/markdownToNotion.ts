@@ -1,3 +1,6 @@
+import { toRichText } from './richText.ts';
+import { limitNestedChildren } from './blocks.ts';
+
 // Markdownの行解析用型定義
 export interface ParsedMarkdownLine {
   level: number;
@@ -78,9 +81,8 @@ export function parseMarkdownLine(line: string): ParsedMarkdownLine {
 
 // パース結果からNotion API用ブロックオブジェクトを生成
 export function createNotionBlock(item: ParsedMarkdownLine): any {
-  const rich_text = item.content
-    ? [{ type: 'text' as const, text: { content: item.content } }]
-    : [];
+  // 2,000 文字を超える行は rich_text の複数要素に分割する
+  const rich_text = item.content ? toRichText(item.content).richText : [];
 
   switch (item.type) {
     case 'bulleted_list_item':
@@ -149,12 +151,27 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
   }
   const stack: StackEntry[] = [];
 
+  // 直前に空段落を出力したか（連続する空行を1つの空段落にまとめるため）
+  let lastWasBlank = false;
+
   for (const rawLine of lines) {
     const item = parseMarkdownLine(rawLine);
+
+    // 空行はネストをリセットし、連続する空行は1つの空段落にまとめる（先頭の空行は出力しない）
+    if (!item.content) {
+      stack.length = 0;
+      if (rootBlocks.length > 0 && !lastWasBlank) {
+        rootBlocks.push(createNotionBlock(item));
+        lastWasBlank = true;
+      }
+      continue;
+    }
+    lastWasBlank = false;
+
     const block = createNotionBlock(item);
 
-    // 見出しや空行はネストの親にせず、スタックをクリアしてルートに配置
-    if (['heading_1', 'heading_2', 'heading_3'].includes(item.type) || !item.content) {
+    // 見出しはネストの親にせず、スタックをクリアしてルートに配置
+    if (['heading_1', 'heading_2', 'heading_3'].includes(item.type)) {
       stack.length = 0;
       rootBlocks.push(block);
       continue;
@@ -213,5 +230,9 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
   }
   cleanEmptyChildren(rootBlocks);
 
-  return rootBlocks;
+  // 末尾の空行は出力しない
+  if (lastWasBlank) rootBlocks.pop();
+
+  // ネストした children の 100 件上限を超える分は親の兄弟として後ろに出す
+  return limitNestedChildren(rootBlocks);
 }

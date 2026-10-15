@@ -120,9 +120,37 @@ describe('parseMarkdownToNotionBlocks', () => {
     expect(textOf(blocks[2])).toBe('b');
   });
 
-  it('連続する空行はそれぞれ空段落になる（現行仕様）', () => {
-    const blocks = parseMarkdownToNotionBlocks(['a', '', '', 'b'].join('\n'));
-    expect(blocks.map((b) => b.type)).toEqual(['paragraph', 'paragraph', 'paragraph', 'paragraph']);
+  it('連続する空行は1つの空段落にまとめる', () => {
+    const blocks = parseMarkdownToNotionBlocks(['a', '', '', '  ', 'b'].join('\n'));
+    expect(blocks.map(textOf)).toEqual(['a', '', 'b']);
+  });
+
+  it('先頭・末尾の空行は出力しない', () => {
+    const blocks = parseMarkdownToNotionBlocks(['', '', 'a', '', 'b', '', ''].join('\n'));
+    expect(blocks.map(textOf)).toEqual(['a', '', 'b']);
+  });
+
+  it('2,000 文字を超える行は rich_text の複数要素に分割する', () => {
+    const blocks = parseMarkdownToNotionBlocks('x'.repeat(5000));
+    expect(blocks).toHaveLength(1);
+    const lengths = blocks[0].paragraph.rich_text.map((t: any) => t.text.content.length);
+    expect(lengths).toEqual([2000, 2000, 1000]);
+  });
+
+  it('ネストした子が100件を超える場合、超過分は親の兄弟として後ろに出す', () => {
+    const lines = ['- parent', ...Array.from({ length: 150 }, (_, i) => `  - c${i}`), '- next'];
+    const blocks = parseMarkdownToNotionBlocks(lines.join('\n'));
+    expect(childrenOf(blocks[0])).toHaveLength(100);
+    expect(textOf(childrenOf(blocks[0])![99])).toBe('c99');
+    // 超過した c100〜c149 は parent の直後に、元の順序で並ぶ
+    expect(blocks.slice(1, 51).map(textOf)).toEqual(Array.from({ length: 50 }, (_, i) => `c${i + 100}`));
+    expect(textOf(blocks[51])).toBe('next');
+  });
+
+  it('300行の箇条書きはルートに300件並ぶ（送信時に100件ずつ分割する）', () => {
+    const lines = Array.from({ length: 300 }, (_, i) => `- item${i}`);
+    const blocks = parseMarkdownToNotionBlocks(lines.join('\n'));
+    expect(blocks).toHaveLength(300);
   });
 
   it('見出しはネストをリセットする', () => {

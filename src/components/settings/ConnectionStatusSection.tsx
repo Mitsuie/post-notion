@@ -159,7 +159,7 @@ export function ConnectionStatusSection({
                 fontSize: '0.7rem',
               }}
             >
-              {statusData.environment?.notionApiKeyMasked || '設定済み'}
+              {statusData.environment?.notionApiKeyConfigured === false ? '未設定' : '設定済み'}
             </span>
           </div>
         </div>

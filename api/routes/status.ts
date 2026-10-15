@@ -2,6 +2,13 @@ import { Hono } from 'hono';
 import type { Bindings } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
 import { filterUsedPostsProperties, queryAll } from '../utils/notion.ts';
+import { toClientError } from '../utils/errors.ts';
+
+// 接続確認の失敗理由を定型文に変換する（Notion の生メッセージは返さず、原因の切り分けに必要な粒度のみ残す）
+function describeDbError(reason: unknown): string {
+  console.error('[status] Notion database check failed:', reason);
+  return toClientError(reason, 'データベースに接続できませんでした').message;
+}
 
 export const statusRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -129,7 +136,7 @@ statusRouter.get('/', async (c) => {
       : {
           connected: false,
           idMasked: maskId(env.NOTION_POSTS_DATABASE_ID),
-          error: (postsDbResult.reason as any)?.message || String(postsDbResult.reason),
+          error: describeDbError(postsDbResult.reason),
         };
 
   const hasTagsDb = !!env.NOTION_TAGS_DATABASE_ID && env.NOTION_TAGS_DATABASE_ID.trim() !== '';
@@ -140,7 +147,7 @@ statusRouter.get('/', async (c) => {
           connected: false,
           configured: hasTagsDb,
           idMasked: maskId(env.NOTION_TAGS_DATABASE_ID),
-          error: (tagsDbResult.reason as any)?.message || String(tagsDbResult.reason),
+          error: describeDbError(tagsDbResult.reason),
         };
 
   const hasDailyReportDb = !!env.NOTION_DAILY_REPORT_DATABASE_ID && env.NOTION_DAILY_REPORT_DATABASE_ID.trim() !== '';
@@ -151,7 +158,7 @@ statusRouter.get('/', async (c) => {
           connected: false,
           configured: hasDailyReportDb,
           idMasked: maskId(env.NOTION_DAILY_REPORT_DATABASE_ID),
-          error: (dailyReportDbResult.reason as any)?.message || String(dailyReportDbResult.reason),
+          error: describeDbError(dailyReportDbResult.reason),
         };
 
   const isAllOk = postsDb.connected && (tagsDb.connected || !hasTagsDb) && (dailyReportDb.connected || !hasDailyReportDb);
@@ -161,7 +168,7 @@ statusRouter.get('/', async (c) => {
     timestamp: now,
     environment: {
       configured: true,
-      notionApiKeyMasked: maskId(env.NOTION_API_KEY),
+      notionApiKeyConfigured: true,
     },
     postsDb,
     tagsDb,

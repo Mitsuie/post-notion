@@ -79,7 +79,7 @@ export interface StatusData {
   timestamp: string;
   environment?: {
     configured: boolean;
-    notionApiKeyMasked?: string;
+    notionApiKeyConfigured?: boolean;
     missing?: string[];
   };
   postsDb?: {

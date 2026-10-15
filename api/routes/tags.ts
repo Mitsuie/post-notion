@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Bindings, TagItem } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
 import { parseTagsLimit, queryAll } from '../utils/notion.ts';
+import { toClientError } from '../utils/errors.ts';
 
 export const tagsRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -42,11 +43,9 @@ tagsRouter.get('/', async (c) => {
       .sort((a, b) => a.name.localeCompare(b.name, 'ja', { numeric: true }));
 
     return c.json({ tags, configured: true, limit: parseTagsLimit(env.NOTION_TAGS_LIMIT) });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch tags from Notion:', error);
-    return c.json(
-      { error: 'Failed to fetch tags', message: error.message || String(error) },
-      500
-    );
+    const { status, message } = toClientError(error, 'タグ一覧の取得に失敗しました');
+    return c.json({ error: 'Failed to fetch tags', message }, status);
   }
 });

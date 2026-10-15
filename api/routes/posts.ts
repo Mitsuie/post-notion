@@ -236,7 +236,8 @@ postsRouter.patch('/:id', async (c) => {
     return c.json(INVALID_ID_RESPONSE, 400);
   }
   const payload = await readJson<UpdatePostPayload>(c);
-  if (!payload || typeof payload.pinned !== 'boolean') {
+  const isArchive = payload?.archived === true;
+  if (!payload || (!isArchive && typeof payload.pinned !== 'boolean') || !isOptionalBoolean(payload.archived)) {
     return c.json(INVALID_JSON_RESPONSE, 400);
   }
   const notion = getNotionClient(env.NOTION_API_KEY);
@@ -244,6 +245,12 @@ postsRouter.patch('/:id', async (c) => {
   try {
     // Posts DB に属するページのみ更新できる
     await assertPostsPage(notion, id, env.NOTION_POSTS_DATABASE_ID);
+
+    // アーカイブ（Notion のゴミ箱へ移動。30日間は Notion 上で復元できる）
+    if (isArchive) {
+      await notion.pages.update({ page_id: id, archived: true });
+      return c.json({ success: true, id, archived: true });
+    }
     const { pinnedKey } = await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID);
 
     const properties: Record<string, any> = {};
@@ -266,7 +273,10 @@ postsRouter.patch('/:id', async (c) => {
   } catch (error: unknown) {
     console.error(`Failed to update post ${id}:`, error);
     if (isValidationError(error)) invalidateSchemaCache(env.NOTION_POSTS_DATABASE_ID);
-    const { status, message } = toClientError(error, '投稿の更新に失敗しました');
+    const { status, message } = toClientError(
+      error,
+      isArchive ? '投稿の削除に失敗しました' : '投稿の更新に失敗しました'
+    );
     return c.json({ error: 'Failed to update post', message }, status);
   }
 });

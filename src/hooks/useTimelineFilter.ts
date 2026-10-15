@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Post, Tag } from '../types';
+import type { Tag } from '../types';
 
 export type DatePreset = 'all' | 'today' | '7d' | '30d' | 'custom';
 
@@ -17,59 +17,75 @@ export const DEFAULT_FILTER: FilterState = {
   selectedTagIds: [],
 };
 
-// 作成日フィルター判定ヘルパー
-export function matchesDateFilter(createdTime: string, filter: FilterState): boolean {
-  if (filter.datePreset === 'all') return true;
-
-  const postDate = new Date(createdTime);
-  const now = new Date();
-
-  switch (filter.datePreset) {
-    case 'today': {
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      return postDate.getTime() >= todayStart;
-    }
-    case '7d': {
-      const past7d = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-      return postDate.getTime() >= past7d;
-    }
-    case '30d': {
-      const past30d = now.getTime() - 30 * 24 * 60 * 60 * 1000;
-      return postDate.getTime() >= past30d;
-    }
-    case 'custom': {
-      if (!filter.customStartDate && !filter.customEndDate) return true;
-      const postTime = postDate.getTime();
-      if (filter.customStartDate) {
-        const start = new Date(`${filter.customStartDate}T00:00:00`).getTime();
-        if (postTime < start) return false;
-      }
-      if (filter.customEndDate) {
-        const end = new Date(`${filter.customEndDate}T23:59:59.999`).getTime();
-        if (postTime > end) return false;
-      }
-      return true;
-    }
-    default:
-      return true;
-  }
+// GET /api/posts に渡す絞り込み・並び順の条件（値はすべて文字列）
+export interface PostsQueryParams {
+  from?: string; // 作成日時の下限（ISO 8601）
+  to?: string; // 作成日時の上限（ISO 8601）
+  tags?: string; // タグIDのカンマ区切り（OR 条件）
+  order: 'desc' | 'asc';
+  pin: '1' | '0';
 }
 
-// タグフィルター判定ヘルパー（複数選択: OR条件）
-export function matchesTagFilter(postTags: { id: string }[], selectedTagIds: string[]): boolean {
-  if (selectedTagIds.length === 0) return true;
-  return postTags.some((t) => selectedTagIds.includes(t.id));
+// ローカル日時文字列を ISO 8601 に変換する（不正な日付は undefined）
+function toIsoOrUndefined(localDateTime: string): string | undefined {
+  const date = new Date(localDateTime);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+// ローカル日付の 0:00（days 日前）
+function startOfLocalDay(now: Date, daysAgo = 0): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+}
+
+/**
+ * フィルター・並び順を GET /api/posts のクエリ条件へ変換する（純粋関数）
+ * - プリセット（今日・7日・30日）の境界はローカル日付の 0:00 に丸める
+ *   （現在時刻基準だとクエリキーが毎回変わりキャッシュが効かないため。「直近7日」は「7日前の 0:00 以降」）
+ * - タグIDは並び順に依存しないよう並べ替えて連結する
+ */
+export function toPostsQueryParams(
+  filter: FilterState,
+  sortOrder: 'desc' | 'asc',
+  pinPriority: boolean,
+  now: Date
+): PostsQueryParams {
+  const params: PostsQueryParams = { order: sortOrder, pin: pinPriority ? '1' : '0' };
+
+  switch (filter.datePreset) {
+    case 'today':
+      params.from = startOfLocalDay(now).toISOString();
+      break;
+    case '7d':
+      params.from = startOfLocalDay(now, 7).toISOString();
+      break;
+    case '30d':
+      params.from = startOfLocalDay(now, 30).toISOString();
+      break;
+    case 'custom': {
+      const from = toIsoOrUndefined(`${filter.customStartDate}T00:00:00`);
+      const to = toIsoOrUndefined(`${filter.customEndDate}T23:59:59.999`);
+      if (filter.customStartDate && from) params.from = from;
+      if (filter.customEndDate && to) params.to = to;
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (filter.selectedTagIds.length > 0) {
+    params.tags = [...filter.selectedTagIds].sort().join(',');
+  }
+
+  return params;
 }
 
 interface UseTimelineFilterOptions {
-  posts: Post[];
   availableTags: Tag[];
   sortOrder: 'desc' | 'asc';
   pinPriority: boolean;
 }
 
 export function useTimelineFilter({
-  posts,
   availableTags,
   sortOrder,
   pinPriority,
@@ -88,24 +104,11 @@ export function useTimelineFilter({
   const isFiltered = isDateFiltered || isTagFiltered;
   const activeFilterCount = (isDateFiltered ? 1 : 0) + (isTagFiltered ? 1 : 0);
 
-  // フィルタリング ＆ ソート処理
-  const filteredAndSortedPosts = useMemo(() => {
-    const filtered = posts.filter((post) => {
-      const dateMatch = matchesDateFilter(post.createdTime, filter);
-      const tagMatch = matchesTagFilter(post.tags, filter.selectedTagIds);
-      return dateMatch && tagMatch;
-    });
-
-    return filtered.sort((a, b) => {
-      if (pinPriority) {
-        if (a.pinned && !b.pinned) return -1;
-        if (!a.pinned && b.pinned) return 1;
-      }
-      const timeA = new Date(a.createdTime).getTime() || 0;
-      const timeB = new Date(b.createdTime).getTime() || 0;
-      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
-    });
-  }, [posts, filter, sortOrder, pinPriority]);
+  // サーバー側で絞り込み・並べ替えを行うためのクエリ条件
+  const queryParams = useMemo(
+    () => toPostsQueryParams(filter, sortOrder, pinPriority, new Date()),
+    [filter, sortOrder, pinPriority]
+  );
 
   // 作成日バッジ用ラベル文字列
   const dateFilterLabel = useMemo(() => {
@@ -151,7 +154,7 @@ export function useTimelineFilter({
     isTagFiltered,
     isFiltered,
     activeFilterCount,
-    filteredAndSortedPosts,
+    queryParams,
     dateFilterLabel,
     handleToggleTag,
   };

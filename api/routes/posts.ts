@@ -10,6 +10,7 @@ import type {
 } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
 import { mapPageToPost } from '../utils/postMapper.ts';
+import { parsePostsQueryParams, buildPostsQuery } from '../utils/postsQuery.ts';
 import {
   getPostsSchema,
   invalidateSchemaCache,
@@ -34,20 +35,25 @@ postsRouter.get('/', async (c) => {
     );
   }
 
-  // ページング用カーソル（前回レスポンスの nextCursor）。空の場合は先頭ページ
-  const cursor = c.req.query('cursor')?.trim() || undefined;
+  // 作成日・タグ・並び順・カーソルの条件（不正な値は無視）
+  const params = parsePostsQueryParams(c.req.query());
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
+    // タグ・ピン留めの条件があるときのみプロパティ名を解決する（5分間キャッシュ）
+    const schema =
+      params.tags.length > 0 || params.pin
+        ? await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID)
+        : {};
+    const query = buildPostsQuery(params, schema);
+    // タグ条件があるのにタグプロパティが存在しない場合は該当なし
+    if (!query) {
+      return c.json({ posts: [], nextCursor: null, hasMore: false });
+    }
+
     const response = await notion.databases.query({
       database_id: env.NOTION_POSTS_DATABASE_ID,
-      start_cursor: cursor,
-      sorts: [
-        {
-          timestamp: 'created_time',
-          direction: 'descending',
-        },
-      ],
+      ...query,
       page_size: 50,
     });
 

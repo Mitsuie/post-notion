@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { Post, PostsPage, CreatePostInput } from '../types';
 import { apiFetch } from '../utils/apiClient';
 import {
@@ -9,19 +9,26 @@ import {
   snapshotPosts,
   restorePosts,
 } from '../utils/postsCache';
+import type { PostsQueryParams } from './useTimelineFilter';
 
-export function usePosts() {
-  const queryClient = useQueryClient();
-
-  // タイムライン一覧取得（50件ずつのカーソルページング）
+/**
+ * タイムライン一覧取得（作成日・タグ・並び順の条件をサーバー側で適用し、50件ずつカーソルページング）
+ */
+export function usePostsQuery(params: PostsQueryParams) {
   const postsQuery = useInfiniteQuery({
-    queryKey: POSTS_QUERY_KEY,
+    queryKey: [...POSTS_QUERY_KEY, params],
     queryFn: async ({ pageParam }) => {
-      const query = pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : '';
-      return apiFetch<PostsPage>(`/api/posts${query}`);
+      const search = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined) search.set(key, value);
+      }
+      if (pageParam) search.set('cursor', pageParam);
+      return apiFetch<PostsPage>(`/api/posts?${search.toString()}`);
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
+    // 条件切り替え中は直前の結果を表示し、ちらつきを防ぐ
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5分間キャッシュ
   });
 
@@ -30,6 +37,22 @@ export function usePosts() {
     () => postsQuery.data?.pages.flatMap((page) => page.posts) ?? [],
     [postsQuery.data]
   );
+
+  return {
+    posts,
+    isLoading: postsQuery.isLoading,
+    isPlaceholderData: postsQuery.isPlaceholderData,
+    fetchNextPage: postsQuery.fetchNextPage,
+    hasNextPage: postsQuery.hasNextPage,
+    isFetchingNextPage: postsQuery.isFetchingNextPage,
+  };
+}
+
+/**
+ * 投稿の作成・ピン留め（楽観的更新付き）
+ */
+export function usePostMutations() {
+  const queryClient = useQueryClient();
 
   // 楽観的UI更新付きの新規投稿
   const createPostMutation = useMutation({
@@ -63,7 +86,7 @@ export function usePosts() {
         isOptimistic: true, // 送信中フラグ
       };
 
-      // タイムライン先頭へ挿入（一覧が未取得の場合は何もしない）
+      // 現在表示中の一覧の先頭へ挿入（一覧が未取得の場合は何もしない）
       prependPost(queryClient, optimisticPost);
 
       return { snapshot };
@@ -108,11 +131,6 @@ export function usePosts() {
   });
 
   return {
-    posts,
-    isLoading: postsQuery.isLoading,
-    fetchNextPage: postsQuery.fetchNextPage,
-    hasNextPage: postsQuery.hasNextPage,
-    isFetchingNextPage: postsQuery.isFetchingNextPage,
     createPost: createPostMutation.mutate,
     createPostAsync: createPostMutation.mutateAsync,
     isCreating: createPostMutation.isPending,

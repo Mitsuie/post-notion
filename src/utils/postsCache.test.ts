@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, InfiniteQueryObserver } from '@tanstack/react-query';
 import type { Post, PostsPage } from '../types';
 import {
   POSTS_QUERY_KEY,
@@ -41,10 +41,23 @@ describe('postsCache', () => {
     expect(qc.getQueryData(POSTS_QUERY_KEY)).toBeUndefined();
   });
 
-  it('prependPost は1ページ目の先頭に挿入する', () => {
-    qc.setQueryData(POSTS_QUERY_KEY, data(page(['a', 'b'], true), page(['c'])));
+  it('prependPost は表示中の一覧の1ページ目の先頭に挿入し、非表示の一覧には挿入しない', () => {
+    const activeKey = [...POSTS_QUERY_KEY, { order: 'desc' }];
+    const inactiveKey = [...POSTS_QUERY_KEY, { order: 'asc' }];
+    qc.setQueryData(activeKey, data(page(['a', 'b'], true), page(['c'])));
+    qc.setQueryData(inactiveKey, data(page(['c'])));
+    // 画面で購読中（active）の状態を再現する
+    const unsubscribe = new InfiniteQueryObserver(qc, {
+      queryKey: activeKey,
+      queryFn: async () => page([]),
+      initialPageParam: null,
+      getNextPageParam: () => undefined,
+      staleTime: Infinity,
+    }).subscribe(() => {});
     prependPost(qc, post('new'));
-    expect(idsOf(qc)).toEqual([['new', 'a', 'b'], ['c']]);
+    expect(idsOf(qc, activeKey)).toEqual([['new', 'a', 'b'], ['c']]);
+    expect(idsOf(qc, inactiveKey)).toEqual([['c']]);
+    unsubscribe();
   });
 
   it('updatePost は2ページ目以降の投稿も更新し、ページ情報を保つ', () => {

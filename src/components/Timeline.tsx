@@ -25,6 +25,7 @@ interface TimelineProps {
   isRefreshing?: boolean;
   onTogglePin?: (id: string, pinned: boolean) => void;
   onArchive?: (id: string) => void;
+  onUpdateTitle?: (id: string, title: string) => void;
 }
 
 export function Timeline({
@@ -34,6 +35,7 @@ export function Timeline({
   isRefreshing,
   onTogglePin,
   onArchive,
+  onUpdateTitle,
 }: TimelineProps) {
   // ソート設定（localStorageに保存して記憶）
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>(() => {
@@ -349,6 +351,7 @@ export function Timeline({
               availableTags={availableTags}
               onTogglePin={onTogglePin}
               onArchive={onArchive}
+              onUpdateTitle={onUpdateTitle}
             />
           ))}
         </div>

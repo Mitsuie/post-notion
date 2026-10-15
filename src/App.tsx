@@ -26,7 +26,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 export default function App() {
   const queryClient = useQueryClient();
   const toast = useToast();
-  const { createPost, isCreating, togglePin, archivePost } = usePostMutations();
+  const { createPost, isCreating, togglePin, archivePost, updateTitle } = usePostMutations();
   const { data: tagsData } = useTags();
   const {
     isDailyReportConfigured,
@@ -136,6 +136,21 @@ export default function App() {
       });
     },
     [archivePost, toast]
+  );
+
+  // タイトル変更ハンドラ
+  const handleUpdateTitle = useCallback(
+    (id: string, title: string) => {
+      updateTitle(
+        { id, title },
+        {
+          onError: (err: unknown) => {
+            toast.error(getErrorMessage(err, 'タイトルの更新に失敗しました'));
+          },
+        }
+      );
+    },
+    [updateTitle, toast]
   );
 
   // 手動リフレッシュ
@@ -252,6 +267,7 @@ export default function App() {
           isRefreshing={isRefreshing}
           onTogglePin={handleTogglePin}
           onArchive={handleArchive}
+          onUpdateTitle={handleUpdateTitle}
         />
       </main>
 

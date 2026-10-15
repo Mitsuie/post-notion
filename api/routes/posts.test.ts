@@ -140,3 +140,32 @@ describe('投稿のアーカイブ', () => {
     expect(notion).not.toHaveBeenCalled();
   });
 });
+
+describe('タイトルの変更', () => {
+  const ownPage = { id: PAGE_ID, parent: { database_id: POSTS_DB }, properties: {} };
+  function mockUpdate() {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return ownPage;
+      if (method === 'get' && path === `databases/${POSTS_DB}`) return { properties: { Name: { type: 'title' } } };
+      if (method === 'patch' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+  }
+
+  it('改行をスペースに置換し、2,000 文字ごとに分割して保存する', async () => {
+    mockUpdate();
+    const title = `一行目\n${'あ'.repeat(2500)}`;
+    const res = await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ title }));
+    expect(res.status).toBe(200);
+    const update = notion.mock.calls.find(([args]: any) => args.method === 'patch')![0];
+    const items = update.body.properties.Name.title.map((t: any) => t.text.content);
+    expect(items.join('')).toBe(`一行目 ${'あ'.repeat(2500)}`);
+    expect(items.map((t: string) => t.length)).toEqual([2000, 504]);
+  });
+
+  it('空のタイトル（空白・改行のみを含む）は 400', async () => {
+    expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ title: ' \n ' }))).status).toBe(400);
+    expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ title: 1 }))).status).toBe(400);
+    expect(notion).not.toHaveBeenCalled();
+  });
+});

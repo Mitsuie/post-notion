@@ -159,8 +159,34 @@ export function usePostMutations() {
     },
   });
 
+  // タイトルの変更（楽観的に反映し、失敗時は元に戻す）
+  const updateTitleMutation = useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }) => {
+      return apiFetch(`/api/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+    },
+    onMutate: async ({ id, title }) => {
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
+      const snapshot = snapshotPosts(queryClient);
+      updatePost(queryClient, id, (post) => ({ ...post, title }));
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot) {
+        restorePosts(queryClient, context.snapshot);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
+    },
+  });
+
   return {
     archivePost: archivePostMutation.mutate,
+    updateTitle: updateTitleMutation.mutate,
     createPost: createPostMutation.mutate,
     createPostAsync: createPostMutation.mutateAsync,
     isCreating: createPostMutation.isPending,

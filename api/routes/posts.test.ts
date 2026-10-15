@@ -104,6 +104,6 @@ describe('エラーメッセージの定型化', () => {
     const tags = ['0123456789abcdef0123456789abcd01', '0123456789abcdef0123456789abcd02'];
     const res = await call('POST', '/api/posts', JSON.stringify({ title: 'a', tagIds: tags, linkDailyReport: false }));
     expect(res.status).toBe(400);
-    expect((await res.json()).message).toContain('1件に制限');
+    expect(((await res.json()) as { message: string }).message).toContain('1件に制限');
   });
 });

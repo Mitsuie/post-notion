@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { X, Sliders } from 'lucide-react';
 import { useSystemStatus } from '../hooks/useSystemStatus';
 import type { UserPreferences } from '../hooks/useUserPreferences';
@@ -52,6 +53,36 @@ export function SettingsDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // 開いたら閉じるボタンへフォーカスし、閉じたら開く直前の要素（ハンバーガーボタン）へ戻す
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    return () => previouslyFocused?.focus();
+  }, [isOpen]);
+
+  // Tab キーのフォーカスをドロワー内で循環させる（背景の要素にフォーカスを移さない）
+  const handlePanelKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab' || !panelRef.current) return;
+    const focusable = Array.from(
+      panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((el) => el.offsetParent !== null);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   // ドロワー展開時は背景スクロールを抑止
   useEffect(() => {
     if (isOpen) {
@@ -101,6 +132,11 @@ export function SettingsDrawer({
 
       {/* ドロワーパネル本体（右からスライドイン） */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title"
+        onKeyDown={handlePanelKeyDown}
         className="animate-slide-in-right glass"
         style={{
           position: 'absolute',
@@ -132,12 +168,13 @@ export function SettingsDrawer({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sliders size={18} style={{ color: 'var(--accent-primary)' }} />
-            <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <span id="settings-title" style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               設定 & ステータス
             </span>
           </div>
           <button
             type="button"
+            ref={closeButtonRef}
             onClick={onClose}
             aria-label="閉じる"
             style={{

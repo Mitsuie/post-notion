@@ -67,6 +67,7 @@ export function ActiveFilterChips({
           <button
             type="button"
             onClick={onClearDateFilter}
+            aria-label="作成日フィルターを解除"
             style={{
               background: 'none',
               border: 'none',
@@ -106,6 +107,7 @@ export function ActiveFilterChips({
             <button
               type="button"
               onClick={() => onToggleTag(tagId)}
+              aria-label={`タグ「${tagName}」の絞り込みを解除`}
               style={{
                 background: 'none',
                 border: 'none',

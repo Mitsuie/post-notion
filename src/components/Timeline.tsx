@@ -102,6 +102,7 @@ export function Timeline({
             type="button"
             className="mobile-icon-btn"
             onClick={() => setIsFilterPanelOpen((prev) => !prev)}
+            aria-expanded={isFilterPanelOpen}
             style={{
               background: isFilterPanelOpen || isFiltered ? 'var(--accent-light)' : 'var(--bg-tertiary)',
               border: `1px solid ${isFilterPanelOpen || isFiltered ? 'var(--accent-primary)' : 'var(--border-color)'}`,
@@ -130,6 +131,7 @@ export function Timeline({
             type="button"
             className="mobile-icon-btn"
             onClick={() => setPinPriority((prev) => !prev)}
+            aria-pressed={pinPriority}
             style={{
               background: pinPriority ? 'var(--pinned-bg)' : 'var(--bg-tertiary)',
               border: `1px solid ${pinPriority ? 'var(--pinned-border)' : 'var(--border-color)'}`,

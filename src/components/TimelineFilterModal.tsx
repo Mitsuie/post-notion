@@ -64,6 +64,7 @@ export function TimelineFilterModal({
             alignItems: 'center',
           }}
           title="フィルター設定パネルを閉じる"
+          aria-label="閉じる"
         >
           <X size={15} />
         </button>
@@ -91,6 +92,7 @@ export function TimelineFilterModal({
                 key={preset.id}
                 type="button"
                 onClick={() => setFilter((prev) => ({ ...prev, datePreset: preset.id }))}
+                aria-pressed={isActive}
                 style={{
                   background: isActive ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                   border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'}`,
@@ -130,13 +132,14 @@ export function TimelineFilterModal({
                 type="date"
                 value={filter.customStartDate}
                 onChange={(e) => setFilter((prev) => ({ ...prev, customStartDate: e.target.value }))}
+                aria-label="開始日"
+                className="input-date"
                 style={{
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
                   padding: '3px 6px',
                   borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.75rem',
                   outline: 'none',
                 }}
               />
@@ -148,13 +151,14 @@ export function TimelineFilterModal({
                 type="date"
                 value={filter.customEndDate}
                 onChange={(e) => setFilter((prev) => ({ ...prev, customEndDate: e.target.value }))}
+                aria-label="終了日"
+                className="input-date"
                 style={{
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
                   padding: '3px 6px',
                   borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.75rem',
                   outline: 'none',
                 }}
               />
@@ -234,6 +238,7 @@ export function TimelineFilterModal({
                   type="button"
                   className={`filter-tag-item ${isSelected ? 'selected' : ''}`}
                   onClick={() => onToggleTag(tag.id)}
+                  aria-pressed={isSelected}
                   style={{
                     background: isSelected ? 'var(--accent-light)' : 'var(--bg-tertiary)',
                     border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-color)'}`,

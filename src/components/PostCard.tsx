@@ -70,6 +70,7 @@ export function PostCard({
           <button
             type="button"
             onClick={() => onTogglePin?.(post.id, !post.pinned)}
+            aria-pressed={post.pinned}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -201,6 +202,7 @@ export function PostCard({
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
+            aria-expanded={showDetails}
             style={{
               background: 'none',
               border: 'none',
@@ -262,6 +264,7 @@ export function PostCard({
             type="button"
             className="card-action-btn mobile-action-btn"
             onClick={() => setShowComments((prev) => !prev)}
+            aria-expanded={showComments}
             style={{
               background: showComments ? 'var(--accent-light)' : undefined,
               color: showComments || commentsCount > 0 ? 'var(--accent-primary)' : undefined,
@@ -283,6 +286,7 @@ export function PostCard({
             type="button"
             className="card-action-btn mobile-action-btn"
             onClick={() => setShowReplyForm((prev) => !prev)}
+            aria-expanded={showReplyForm}
             style={{
               background: showReplyForm ? 'var(--accent-light)' : undefined,
               color: showReplyForm ? 'var(--accent-primary)' : undefined,

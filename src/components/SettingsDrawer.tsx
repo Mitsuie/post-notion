@@ -193,7 +193,7 @@ export function SettingsDrawer({
           <SyncSection onRefreshAll={onRefreshAll} isRefreshingAll={isRefreshingAll} />
 
           {/* セクション5: アプリ情報 & 操作ヒント */}
-          <ShortcutsHelpSection version="v1.0.2" />
+          <ShortcutsHelpSection version="v1.1.0" />
         </div>
       </div>
     </div>

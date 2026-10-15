@@ -39,13 +39,15 @@ export async function syncCommentsCount(
 
 /**
  * ページのコメント追加回数プロパティを 1 インクリメントする
+ * - 呼び出し側で取得済みのページ（prefetchedPage）があれば使い回し、pages.retrieve を省略する
  */
 export async function incrementCommentsCount(
   notion: Client,
-  pageId: string
+  pageId: string,
+  prefetchedPage?: any
 ): Promise<number | undefined> {
   try {
-    const page: any = await notion.pages.retrieve({ page_id: pageId });
+    const page: any = prefetchedPage ?? (await notion.pages.retrieve({ page_id: pageId }));
     const countKey = resolvePostsSchema(page.properties).commentsCountKey;
     if (!countKey) return undefined;
 

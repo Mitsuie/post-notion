@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { findPropertyKey, filterUsedPostsProperties } from './notion.ts';
+import { findPropertyKey, filterUsedPostsProperties, parseTagsLimit } from './notion.ts';
+
+describe('parseTagsLimit', () => {
+  it('正の整数を返す（前後の空白は無視）', () => {
+    expect(parseTagsLimit('1')).toBe(1);
+    expect(parseTagsLimit(' 3 ')).toBe(3);
+  });
+
+  it('未指定・空文字・0以下・数値でない値は null（無制限）', () => {
+    expect(parseTagsLimit(undefined)).toBeNull();
+    expect(parseTagsLimit('')).toBeNull();
+    expect(parseTagsLimit('0')).toBeNull();
+    expect(parseTagsLimit('-1')).toBeNull();
+    expect(parseTagsLimit('abc')).toBeNull();
+  });
+});
 
 describe('findPropertyKey', () => {
   const properties = {

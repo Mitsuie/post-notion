@@ -1,12 +1,5 @@
 import type { Client } from '@notionhq/client';
-import { findPropertyKey } from './notion.ts';
-
-const COMMENTS_COUNT_CANDIDATES = [
-  'コメント追加回数',
-  'Comments Count',
-  'コメント数',
-  'comments_count',
-];
+import { resolvePostsSchema } from './schema.ts';
 
 /**
  * ページのコメント追加回数プロパティを更新または実数に同期する
@@ -18,7 +11,7 @@ export async function syncCommentsCount(
 ): Promise<number | undefined> {
   try {
     const page: any = await notion.pages.retrieve({ page_id: pageId });
-    const countKey = findPropertyKey(page.properties, COMMENTS_COUNT_CANDIDATES, 'number');
+    const countKey = resolvePostsSchema(page.properties).commentsCountKey;
     if (!countKey) return undefined;
 
     const storedCount =
@@ -53,7 +46,7 @@ export async function incrementCommentsCount(
 ): Promise<number | undefined> {
   try {
     const page: any = await notion.pages.retrieve({ page_id: pageId });
-    const countKey = findPropertyKey(page.properties, COMMENTS_COUNT_CANDIDATES, 'number');
+    const countKey = resolvePostsSchema(page.properties).commentsCountKey;
     if (!countKey) return undefined;
 
     const currentCount =

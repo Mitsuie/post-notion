@@ -1,5 +1,5 @@
 import type { Client } from '@notionhq/client';
-import { findPropertyKey } from './notion.ts';
+import { getDailyReportDateKey } from './schema.ts';
 
 export interface ResolveDailyReportResult {
   dailyPageId?: string;
@@ -35,10 +35,8 @@ export async function resolveDailyReportPageId(
       targetDate = getJapanTodayDateString();
     }
 
-    // 日報DBのプロパティから日付プロパティ名を自動解決
-    const dailyDb = await notion.databases.retrieve({ database_id: dailyDbId });
-    const dateKey =
-      findPropertyKey(dailyDb.properties, ['日付', 'Date', '作成日'], 'date') || '日付';
+    // 日報DBのプロパティから日付プロパティ名を自動解決（5分間キャッシュ）
+    const dateKey = await getDailyReportDateKey(notion, dailyDbId);
 
     // 当日の日報ページをクエリ検索
     const dailyQuery = await notion.databases.query({

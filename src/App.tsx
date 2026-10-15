@@ -24,7 +24,16 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 export default function App() {
   const queryClient = useQueryClient();
-  const { data: postsData, isLoading: isPostsLoading, createPost, isCreating, togglePin } = usePosts();
+  const {
+    posts,
+    isLoading: isPostsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    createPost,
+    isCreating,
+    togglePin,
+  } = usePosts();
   const { data: tagsData } = useTags();
   const {
     isDailyReportConfigured,
@@ -44,7 +53,6 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
 
-  const posts = postsData?.posts || [];
   const tags = tagsData?.tags || [];
   // タグDBが明示的に設定されている場合のみ有効判定（安全サイド）
   const isTagsConfigured = tagsData ? tagsData.configured === true : Boolean(isSystemTagsConfigured);
@@ -276,6 +284,9 @@ export default function App() {
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
           onTogglePin={handleTogglePin}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          onLoadMore={() => fetchNextPage()}
         />
       </main>
 

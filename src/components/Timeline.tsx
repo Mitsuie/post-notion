@@ -7,6 +7,7 @@ import {
   ArrowDown,
   ArrowUp,
   Filter,
+  ChevronsDown,
 } from 'lucide-react';
 import type { Post, Tag } from '../types';
 import { PostCard } from './PostCard';
@@ -24,6 +25,9 @@ interface TimelineProps {
   onRefresh: () => void;
   isRefreshing?: boolean;
   onTogglePin?: (id: string, pinned: boolean) => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  onLoadMore?: () => void;
 }
 
 export function Timeline({
@@ -34,6 +38,9 @@ export function Timeline({
   onRefresh,
   isRefreshing,
   onTogglePin,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  onLoadMore,
 }: TimelineProps) {
   // ソート設定（localStorageに保存して記憶）
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>(() => {
@@ -89,7 +96,21 @@ export function Timeline({
           タイムライン
           {posts.length > 0 && (
             <span style={{ fontSize: '0.8rem', marginLeft: '6px', color: 'var(--text-muted)' }}>
-              (表示{filteredAndSortedPosts.length}件 / 全{posts.length}件)
+              (表示 {filteredAndSortedPosts.length} 件（読み込み済み {posts.length} 件）)
+            </span>
+          )}
+          {/* 未読み込みの投稿がある間は、絞り込みが読み込み済みの範囲に限られることを明示 */}
+          {hasNextPage && isFiltered && (
+            <span
+              style={{
+                display: 'block',
+                fontSize: '0.72rem',
+                fontWeight: 400,
+                marginTop: '2px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              ※ 読み込み済みの範囲で絞り込み中
             </span>
           )}
         </h2>
@@ -335,6 +356,43 @@ export function Timeline({
               onTogglePin={onTogglePin}
             />
           ))}
+        </div>
+      )}
+
+      {/* さらに読み込む（未読み込みの投稿がある場合のみ） */}
+      {hasNextPage && posts.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 16px' }}>
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={isFetchingNextPage}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 20px',
+              fontSize: '0.85rem',
+              fontWeight: 500,
+              cursor: isFetchingNextPage ? 'not-allowed' : 'pointer',
+              opacity: isFetchingNextPage ? 0.7 : 1,
+            }}
+          >
+            {isFetchingNextPage ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                読み込み中...
+              </>
+            ) : (
+              <>
+                <ChevronsDown size={14} />
+                さらに読み込む
+              </>
+            )}
+          </button>
         </div>
       )}
     </section>

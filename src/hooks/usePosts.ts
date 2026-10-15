@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Post, CreatePostInput } from '../types';
+import { useMemo } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Post, PostsPage, CreatePostInput } from '../types';
 import { apiFetch } from '../utils/apiClient';
 import {
   POSTS_QUERY_KEY,
-  type PostsData,
   prependPost,
   updatePost,
   snapshotPosts,
@@ -13,14 +13,23 @@ import {
 export function usePosts() {
   const queryClient = useQueryClient();
 
-  // タイムライン一覧取得
-  const postsQuery = useQuery<PostsData>({
+  // タイムライン一覧取得（50件ずつのカーソルページング）
+  const postsQuery = useInfiniteQuery({
     queryKey: POSTS_QUERY_KEY,
-    queryFn: async () => {
-      return apiFetch<PostsData>('/api/posts');
+    queryFn: async ({ pageParam }) => {
+      const query = pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : '';
+      return apiFetch<PostsPage>(`/api/posts${query}`);
     },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
     staleTime: 1000 * 60 * 5, // 5分間キャッシュ
   });
+
+  // 読み込み済みの全ページを1つの一覧に平坦化
+  const posts = useMemo(
+    () => postsQuery.data?.pages.flatMap((page) => page.posts) ?? [],
+    [postsQuery.data]
+  );
 
   // 楽観的UI更新付きの新規投稿
   const createPostMutation = useMutation({
@@ -99,7 +108,11 @@ export function usePosts() {
   });
 
   return {
-    ...postsQuery,
+    posts,
+    isLoading: postsQuery.isLoading,
+    fetchNextPage: postsQuery.fetchNextPage,
+    hasNextPage: postsQuery.hasNextPage,
+    isFetchingNextPage: postsQuery.isFetchingNextPage,
     createPost: createPostMutation.mutate,
     createPostAsync: createPostMutation.mutateAsync,
     isCreating: createPostMutation.isPending,

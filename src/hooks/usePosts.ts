@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import type { Post, PostsPage, CreatePostInput } from '../types';
+import type { Post, PostsPage, CreatePostInput, CreatePostResult } from '../types';
 import { apiFetch } from '../utils/apiClient';
 import {
   POSTS_QUERY_KEY,
@@ -57,7 +57,7 @@ export function usePostMutations() {
   // 楽観的UI更新付きの新規投稿
   const createPostMutation = useMutation({
     mutationFn: async (input: CreatePostInput) => {
-      return apiFetch('/api/posts', {
+      return apiFetch<CreatePostResult>('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),

@@ -95,7 +95,11 @@ export default function App() {
           toast.error(`${msg}（入力内容を復元しました）`);
           options?.onError?.(err);
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
+          // 投稿は成功したが日報未連携・本文の一部追記失敗などがあった場合は警告する
+          if (data?.warning) {
+            toast.warning(data.warning);
+          }
           options?.onSuccess?.();
         },
       });

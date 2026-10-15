@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Send, X, User, Loader2 } from 'lucide-react';
 import { usePostComments, useCreateComment } from '../hooks/usePostComments';
 import { formatDate, formatFullDate } from '../utils/date';
+import { useToast } from './Toast';
 
 interface PostCommentsProps {
   postId: string;
@@ -28,6 +29,7 @@ export function PostComments({
   onCloseReplyForm,
 }: PostCommentsProps) {
   const [replyText, setReplyText] = useState('');
+  const toast = useToast();
 
   // コメント展開または返信フォーム表示時のみオンデマンドでコメント一覧を取得
   const shouldFetchComments = showComments || showReplyForm;
@@ -49,9 +51,13 @@ export function PostComments({
     createCommentMutation.mutate(
       { text: trimmed },
       {
+        // 成功時のみ入力を消してフォームを閉じる（失敗時は入力を残す）
         onSuccess: () => {
           setReplyText('');
           onCloseReplyForm();
+        },
+        onError: () => {
+          toast.error('コメントの送信に失敗しました（入力内容は残っています）');
         },
       }
     );

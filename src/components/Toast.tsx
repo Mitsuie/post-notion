@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { APP_TOAST_EVENT, type AppToastDetail } from '../utils/toastEvents';
 
 export type ToastType = 'error' | 'warning' | 'info';
 
@@ -55,6 +56,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   // アンマウント時にタイマーを破棄
   useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  // React の外（apiClient・QueryCache など）から dispatchToast で送られた通知を表示する
+  useEffect(() => {
+    const handleAppToast = (e: Event) => {
+      const { type, message } = (e as CustomEvent<AppToastDetail>).detail;
+      show(type, message);
+    };
+    window.addEventListener(APP_TOAST_EVENT, handleAppToast);
+    return () => window.removeEventListener(APP_TOAST_EVENT, handleAppToast);
+  }, [show]);
 
   const api = useMemo<ToastApi>(
     () => ({

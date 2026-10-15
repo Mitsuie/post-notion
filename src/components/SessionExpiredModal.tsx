@@ -26,12 +26,12 @@ export function SessionExpiredModal({
 
         {/* タイトル */}
         <h3 className="session-expired-title">
-          セッションの有効期限が切れました
+          認証セッションが切れた可能性があります
         </h3>
 
         {/* 説明文 */}
         <p className="session-expired-desc">
-          Cloudflare Access の認証セッションが切れました。<br />
+          Cloudflare Access の認証セッションが切れた可能性があります。<br />
           下のボタンから再ログインを行ってください。
         </p>
 

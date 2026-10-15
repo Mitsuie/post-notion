@@ -36,6 +36,8 @@
   --success-bg: #ecfdf5;
   --danger: #dc2626;
   --danger-bg: #fef2f2;
+  --warning: #b45309;
+  --info: #2563eb;
 
   --font-sans: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --radius-sm: 6px;
@@ -87,11 +89,56 @@
   --success-bg: rgba(16, 185, 129, 0.1);
   --danger: #ef4444;
   --danger-bg: rgba(239, 68, 68, 0.1);
+  --warning: #b45309;
+  --info: #2563eb;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
   --shadow-popover: 0 12px 24px -4px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.25);
+}
+
+/* ==========================================================================
+   トースト通知（ToastProvider）
+   ========================================================================== */
+.toast {
+  position: fixed;
+  top: calc(max(env(safe-area-inset-top, 0px), 16px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90%;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  color: #fff;
+  font-size: 0.85rem;
+  white-space: pre-line;
+}
+
+.toast--error {
+  background: var(--danger);
+}
+
+.toast--warning {
+  background: var(--warning);
+}
+
+.toast--info {
+  background: var(--info);
+}
+
+.toast__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
 }
 
 /* Safe Area Inset ユーティリティ */

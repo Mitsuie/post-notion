@@ -3,12 +3,21 @@
  * 
  * Cloudflare Access セッション失効時の検知 (401/403/HTML返却/CORS遮断) および
  * セッション失効イベント (session-expired) の一元ディスパッチを行います。
+ * fetch 自体が失敗した場合は、ヘルスチェックで「セッション切れ」と「通信エラー」を判別します。
  */
 
 export class SessionExpiredError extends Error {
   constructor(message = 'セッションの有効期限が切れました。再ログインしてください。') {
     super(message);
     this.name = 'SessionExpiredError';
+  }
+}
+
+// サーバー停止・回線断など、認証以外の理由で通信できなかったことを表すエラー
+export class NetworkError extends Error {
+  constructor(message = '通信に失敗しました。再試行してください') {
+    super(message);
+    this.name = 'NetworkError';
   }
 }
 
@@ -41,6 +50,26 @@ export interface ApiRequestOptions extends RequestInit {
 }
 
 /**
+ * fetch が例外を投げた場合に、認証切れか一時的な通信エラーかを判別する
+ * - Access の認証が切れていると /api/health もログイン画面へリダイレクトされる
+ * - health も届かない場合はサーバー停止・回線断とみなす
+ */
+export async function probeSession(): Promise<'expired' | 'network'> {
+  try {
+    const res = await fetch('/api/health', {
+      redirect: 'manual',
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
+    if (res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) return 'expired';
+    if ((res.headers.get('content-type') || '').includes('text/html')) return 'expired';
+    return 'network'; // health は通るのに本リクエストが失敗 = 一時的な通信エラー
+  } catch {
+    return 'network'; // health も届かない = サーバー停止・回線断
+  }
+}
+
+/**
  * 共通 fetchJson ラッパー
  */
 export async function apiFetch<T = unknown>(
@@ -62,15 +91,18 @@ export async function apiFetch<T = unknown>(
   try {
     response = await fetch(url, mergedOptions);
   } catch (err: unknown) {
-    // オフラインでないのに Failed to fetch が発生した場合は CORS 遮断 (Access未認証) の可能性が高い
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      console.warn('[apiClient] ネットワークエラー (CORS遮断または未認証の可能性):', err);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new NetworkError('オフラインのため通信できません。接続を確認してください');
+    }
+    // オンラインなのに fetch が失敗した場合は、Access 未認証（CORS 遮断）か通信エラーかを判別する
+    console.warn('[apiClient] fetch に失敗しました。セッション状態を確認します:', err);
+    if ((await probeSession()) === 'expired') {
       if (!skipSessionExpiredNotice) {
         dispatchSessionExpired('通信が遮断されました');
       }
       throw new SessionExpiredError();
     }
-    throw err;
+    throw new NetworkError();
   }
 
   // 1. Cloudflare Access へのリダイレクト検知

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, X, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { usePostMutations } from './hooks/usePosts';
 import { useTags } from './hooks/useTags';
 import { checkHasDraft } from './hooks/useDraft';
@@ -12,6 +12,7 @@ import { Logo } from './components/Logo';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
+import { useToast } from './components/Toast';
 import { useSystemStatus } from './hooks/useSystemStatus';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import type { CreatePostInput } from './types';
@@ -24,6 +25,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 export default function App() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { createPost, isCreating, togglePin } = usePostMutations();
   const { data: tagsData } = useTags();
   const {
@@ -39,7 +41,6 @@ export default function App() {
     return (localStorage.getItem('post-notion-theme') as 'light' | 'dark') || 'light';
   });
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
@@ -78,15 +79,6 @@ export default function App() {
     };
   }, []);
 
-  // エラートースト通知の5秒自動消去タイマー
-  useEffect(() => {
-    if (!errorMessage) return;
-    const timer = setTimeout(() => {
-      setErrorMessage(null);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [errorMessage]);
-
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   }, []);
@@ -100,7 +92,7 @@ export default function App() {
       createPost(input, {
         onError: (err: unknown) => {
           const msg = getErrorMessage(err, '投稿の送信に失敗しました');
-          setErrorMessage(`${msg}（入力内容を復元しました）`);
+          toast.error(`${msg}（入力内容を復元しました）`);
           options?.onError?.(err);
         },
         onSuccess: () => {
@@ -108,7 +100,7 @@ export default function App() {
         },
       });
     },
-    [createPost]
+    [createPost, toast]
   );
 
   // ピン留め切り替えハンドラ
@@ -119,12 +111,12 @@ export default function App() {
         {
           onError: (err: unknown) => {
             const msg = getErrorMessage(err, 'ピン留めの更新に失敗しました');
-            setErrorMessage(msg);
+            toast.error(msg);
           },
         }
       );
     },
-    [togglePin]
+    [togglePin, toast]
   );
 
   // 手動リフレッシュ
@@ -169,39 +161,6 @@ export default function App() {
         onReLogin={handleReLogin}
         onClearCacheAndReload={handleClearCacheAndReload}
       />
-
-      {/* エラートースト通知 */}
-      {errorMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 'calc(max(env(safe-area-inset-top, 0px), 16px) + 8px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 100,
-            background: 'var(--danger)',
-            color: '#fff',
-            padding: '10px 16px',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-popover)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.85rem',
-            maxWidth: '90%',
-          }}
-        >
-          <AlertCircle size={16} />
-          <span>{errorMessage}</span>
-          <button
-            type="button"
-            onClick={() => setErrorMessage(null)}
-            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
 
       {/* ヘッダー */}
       <header

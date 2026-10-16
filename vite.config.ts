@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import pkg from './package.json';
+import pkg from './package.json' with { type: 'json' };
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,6 +9,11 @@ export default defineConfig({
   define: {
     // 設定画面のバージョン表記を package.json に一元化する
     __APP_VERSION__: JSON.stringify(pkg.version),
+  },
+  build: {
+    // Vite 8 既定の Lightning CSS で圧縮すると、接頭辞なしの backdrop-filter が落ちる（-webkit- のみ残り Firefox で効かない）うえ、
+    // 文字の描画位置がずれるため、Vite 7 までと同じ esbuild で圧縮する（esbuild は devDependencies に明示）
+    cssMinify: 'esbuild',
   },
   server: {
     port: 5173,

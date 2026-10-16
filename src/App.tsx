@@ -6,6 +6,7 @@ import { useTags } from './hooks/useTags';
 import { checkHasDraft } from './hooks/useDraft';
 import { clearCacheAndReload, reloadPage } from './utils/pwa';
 import { POSTS_QUERY_KEY } from './utils/postsCache';
+import { getItem, setItem, STORAGE_KEYS } from './utils/storage';
 import { InputBar } from './components/InputBar';
 import { Timeline } from './components/Timeline';
 import { Logo } from './components/Logo';
@@ -38,7 +39,7 @@ export default function App() {
 
   // テーマ管理（白ベース / ライトモードをデフォルト）
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('post-notion-theme') as 'light' | 'dark') || 'light';
+    return (getItem(STORAGE_KEYS.theme) as 'light' | 'dark') || 'light';
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -54,7 +55,7 @@ export default function App() {
   // テーマ変更を HTML data-theme 属性、localStorage、favicon、theme-color meta に同期
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('post-notion-theme', theme);
+    setItem(STORAGE_KEYS.theme, theme);
 
     const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null;
     if (favicon) {

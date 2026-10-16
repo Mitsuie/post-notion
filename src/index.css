@@ -306,7 +306,19 @@ body {
 /* ==========================================================================
    モバイルレスポンシブ ユーティリティ (幅 600px 以下)
    ========================================================================== */
+/* 入力欄の文字サイズ（モバイルでは下のメディアクエリで 16px に上書き） */
+.input-title { font-size: 0.95rem; }
+.input-body { font-size: 0.875rem; }
+.input-comment { font-size: 0.85rem; }
+.input-date { font-size: 0.75rem; }
+
 @media (max-width: 600px) {
+  /* iOS Safari は 16px 未満の入力欄にフォーカスすると自動ズームするため、モバイル幅では 16px にする */
+  textarea, input, select,
+  .input-title, .input-body, .input-comment, .input-date {
+    font-size: 16px;
+  }
+
   /* スマホ画面で非表示にするテキスト用 */
   .hide-on-mobile {
     display: none !important;

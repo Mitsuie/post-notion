@@ -96,6 +96,7 @@ export function PostComments({
             <button
               type="button"
               onClick={onCloseReplyForm}
+              aria-label="返信フォームを閉じる"
               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
             >
               <X size={13} />
@@ -107,7 +108,9 @@ export function PostComments({
             onChange={(e) => setReplyText(e.target.value)}
             onKeyDown={handleReplyKeyDown}
             placeholder="返信や考察メモを入力 (改行可、Markdown対応)..."
+            aria-label="返信・コメント"
             rows={3}
+            className="input-comment"
             autoFocus
             style={{
               width: '100%',
@@ -116,7 +119,6 @@ export function PostComments({
               borderRadius: 'var(--radius-md)',
               padding: '10px 12px',
               color: 'var(--text-primary)',
-              fontSize: '0.85rem',
               lineHeight: 1.5,
               resize: 'vertical',
               fontFamily: 'inherit',

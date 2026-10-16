@@ -249,7 +249,9 @@ export function InputBar({
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         placeholder="いま考えていること、タイトル... (改行不可 / Cmd+Enter で即送信)"
+        aria-label="タイトル"
         rows={2}
+        className="input-title"
         style={{
           width: '100%',
           background: 'var(--bg-tertiary)',
@@ -257,7 +259,6 @@ export function InputBar({
           borderRadius: 'var(--radius-md)',
           padding: '10px 12px',
           color: 'var(--text-primary)',
-          fontSize: '0.95rem',
           lineHeight: 1.5,
           resize: 'none',
           fontFamily: 'inherit',
@@ -276,7 +277,9 @@ export function InputBar({
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={handleBodyKeyDown}
         placeholder="本文・詳細メモ (任意、改行可、Markdown対応)..."
+        aria-label="本文"
         rows={3}
+        className="input-body"
         style={{
           width: '100%',
           background: 'var(--bg-tertiary)',
@@ -284,7 +287,6 @@ export function InputBar({
           borderRadius: 'var(--radius-md)',
           padding: '10px 12px',
           color: 'var(--text-primary)',
-          fontSize: '0.875rem',
           lineHeight: 1.6,
           resize: 'vertical',
           fontFamily: 'inherit',
@@ -320,6 +322,7 @@ export function InputBar({
               <button
                 type="button"
                 onClick={() => toggleTag(tag)}
+                aria-label={`タグ「${tag.name}」を外す`}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -365,6 +368,7 @@ export function InputBar({
             type="button"
             className="mobile-icon-btn"
             onClick={() => setIsPinned(!isPinned)}
+          aria-pressed={isPinned}
             style={{
               background: isPinned ? 'var(--pinned-bg)' : 'var(--bg-tertiary)',
               border: `1px solid ${isPinned ? 'var(--pinned-border)' : 'var(--border-color)'}`,
@@ -392,6 +396,7 @@ export function InputBar({
               type="button"
               className="mobile-icon-btn"
               onClick={() => setLinkDailyReport(!linkDailyReport)}
+            aria-pressed={linkDailyReport}
               style={{
                 background: linkDailyReport ? 'var(--accent-light)' : 'var(--bg-tertiary)',
                 border: `1px solid ${linkDailyReport ? 'var(--accent-primary)' : 'var(--border-color)'}`,

@@ -33,6 +33,7 @@ export function ThemeSection({ theme, onToggleTheme }: ThemeSectionProps) {
         <button
           type="button"
           onClick={() => theme !== 'light' && onToggleTheme()}
+          aria-pressed={theme === 'light'}
           style={{
             flex: 1,
             display: 'flex',
@@ -58,6 +59,7 @@ export function ThemeSection({ theme, onToggleTheme }: ThemeSectionProps) {
         <button
           type="button"
           onClick={() => theme !== 'dark' && onToggleTheme()}
+          aria-pressed={theme === 'dark'}
           style={{
             flex: 1,
             display: 'flex',

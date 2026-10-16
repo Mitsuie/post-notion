@@ -50,6 +50,7 @@ export function TagPicker({
         type="button"
         className="mobile-icon-btn"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         title={isRequired && selectedTags.length === 0 ? 'タグ選択（必須）' : 'タグ選択'}
         style={{
           background: isOpen ? 'var(--accent-light)' : 'var(--bg-tertiary)',
@@ -136,13 +137,14 @@ export function TagPicker({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="番号(01)やキーワードで検索..."
+              aria-label="タグを検索"
               autoFocus
+              className="input-comment"
               style={{
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',
                 color: 'var(--text-primary)',
-                fontSize: '0.85rem',
                 width: '100%',
               }}
             />
@@ -150,6 +152,7 @@ export function TagPicker({
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
+                aria-label="検索語をクリア"
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
               >
                 <X size={13} />
@@ -180,6 +183,7 @@ export function TagPicker({
                     type="button"
                     className={`tag-dropdown-item ${isSelected ? 'selected' : ''}`}
                     onClick={() => onToggleTag(tag)}
+                    aria-pressed={isSelected}
                     style={{
                       padding: '7px 10px',
                       borderRadius: 'var(--radius-sm)',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownView } from './MarkdownView';
 import { MessageCircle, Send, X, User, Loader2 } from 'lucide-react';
 import { usePostComments, useCreateComment } from '../hooks/usePostComments';
 import { formatDate, formatFullDate } from '../utils/date';
@@ -252,7 +252,7 @@ export function PostComments({
                     </div>
                   </div>
                   <div className="markdown-content" style={{ color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-                    <ReactMarkdown>{c.text}</ReactMarkdown>
+                    <MarkdownView>{c.text}</MarkdownView>
                   </div>
                 </div>
               ))}

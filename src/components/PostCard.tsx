@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownView } from './MarkdownView';
 import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, ExternalLink, Calendar, Trash2, Pencil } from 'lucide-react';
 import type { Post, Tag } from '../types';
 import { usePostBlocks } from '../hooks/usePostBlocks';
@@ -262,7 +262,7 @@ export function PostCard({
             </div>
           ) : blocksData?.markdown && blocksData.markdown.trim() ? (
             <div className="markdown-content" style={{ overflowX: 'auto' }}>
-              <ReactMarkdown>{blocksData.markdown}</ReactMarkdown>
+              <MarkdownView>{blocksData.markdown}</MarkdownView>
             </div>
           ) : (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', margin: '4px 0' }}>

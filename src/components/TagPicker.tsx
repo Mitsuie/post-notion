@@ -23,18 +23,30 @@ export function TagPicker({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // 外側クリックでポップオーバーを閉じる
+  // 外側クリック・Esc でポップオーバーを閉じる（Esc の場合はトリガーボタンへフォーカスを戻す）
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen]);
 
   // タグ検索フィルタリング（ナンバリング "01" や文字 "Obsidian" に対応）
@@ -47,6 +59,7 @@ export function TagPicker({
   return (
     <div style={{ position: 'relative' }} ref={pickerRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="mobile-icon-btn"
         onClick={() => setIsOpen(!isOpen)}

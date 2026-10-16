@@ -1,17 +1,20 @@
 /* セッション失効モーダル スタイル定義 */
 
-.session-expired-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
+.session-expired-dialog {
+  /* <dialog> の既定スタイルを打ち消し、カードだけを中央に表示する */
+  width: calc(100% - 32px);
+  max-width: 440px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: visible;
+  animation: modalFadeIn 0.2s ease;
+}
+
+.session-expired-dialog::backdrop {
   background-color: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  animation: modalFadeIn 0.2s ease;
 }
 
 @keyframes modalFadeIn {
@@ -27,7 +30,6 @@
 
 .session-expired-card {
   width: 100%;
-  max-width: 440px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-hover);
   padding: 28px 24px;

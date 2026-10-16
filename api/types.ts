@@ -50,6 +50,7 @@ export type CreatePostPayload = {
 export type UpdatePostPayload = {
   pinned?: boolean;
   archived?: boolean; // true でページをアーカイブ（Notion のゴミ箱へ移動）
+  title?: string; // タイトルの変更（改行はスペースに置換）
 };
 
 export type CommentItem = {

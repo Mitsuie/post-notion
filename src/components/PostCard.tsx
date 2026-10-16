@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, ExternalLink, Calendar, Trash2 } from 'lucide-react';
+import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, ExternalLink, Calendar, Trash2, Pencil } from 'lucide-react';
 import type { Post, Tag } from '../types';
 import { usePostBlocks } from '../hooks/usePostBlocks';
 import { PostComments } from './PostComments';
@@ -12,6 +13,7 @@ interface PostCardProps {
   availableTags: Tag[];
   onTogglePin?: (id: string, pinned: boolean) => void;
   onArchive?: (id: string) => void;
+  onUpdateTitle?: (id: string, title: string) => void;
 }
 
 export function PostCard({
@@ -19,6 +21,7 @@ export function PostCard({
   availableTags,
   onTogglePin,
   onArchive,
+  onUpdateTitle,
 }: PostCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -26,8 +29,38 @@ export function PostCard({
   // コメント件数は ['posts'] キャッシュの値を直接表示する（コメント取得・投稿時に postsCache 経由で更新される）
   const commentsCount = post.commentsCount ?? 0;
 
+  // タイトルのインライン編集
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const startEditTitle = () => {
+    setTitleDraft(post.title);
+    setIsEditingTitle(true);
+  };
+  const cancelEditTitle = () => setIsEditingTitle(false);
+  const saveTitle = () => {
+    const next = titleDraft.replace(/[\r\n]+/g, ' ').trim();
+    setIsEditingTitle(false);
+    if (next && next !== post.title) {
+      onUpdateTitle?.(post.id, next);
+    }
+  };
+  const handleTitleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // 日本語入力の変換確定の Enter では保存しない
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveTitle();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditTitle();
+    }
+  };
+
   // 「…」メニューの項目
   const menuItems: PostActionsMenuItem[] = [];
+  if (onUpdateTitle) {
+    menuItems.push({ label: 'タイトルを編集', icon: Pencil, onSelect: startEditTitle });
+  }
   if (onArchive) {
     menuItems.push({
       label: '削除',
@@ -132,19 +165,54 @@ export function PostCard({
         </div>
       </div>
 
-      {/* 本文タイトル */}
-      <div
-        style={{
-          fontSize: '0.95rem',
-          lineHeight: 1.6,
-          color: 'var(--text-primary)',
-          wordBreak: 'break-word',
-          whiteSpace: 'pre-wrap',
-          marginBottom: resolvedTags.length > 0 ? '10px' : '8px',
-        }}
-      >
-        {post.title}
-      </div>
+      {/* 本文タイトル（「…」メニューから編集中はテキストエリアに置き換える） */}
+      {isEditingTitle ? (
+        <div style={{ marginBottom: resolvedTags.length > 0 ? '10px' : '8px' }}>
+          <textarea
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onKeyDown={handleTitleKeyDown}
+            aria-label="タイトルを編集"
+            rows={2}
+            autoFocus
+            className="input-title"
+            style={{
+              width: '100%',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-focus)',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px 10px',
+              color: 'var(--text-primary)',
+              lineHeight: 1.6,
+              resize: 'vertical',
+              fontFamily: 'inherit',
+              outline: 'none',
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '4px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            <span className="hide-on-mobile">Enter で保存 / Esc で取消</span>
+            <button type="button" className="text-btn-muted" onClick={cancelEditTitle}>
+              取消
+            </button>
+            <button type="button" className="text-btn-muted" onClick={saveTitle} disabled={!titleDraft.trim()}>
+              保存
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            color: 'var(--text-primary)',
+            wordBreak: 'break-word',
+            whiteSpace: 'pre-wrap',
+            marginBottom: resolvedTags.length > 0 ? '10px' : '8px',
+          }}
+        >
+          {post.title}
+        </div>
+      )}
 
       {/* タグ一覧バッジ */}
       {resolvedTags.length > 0 && (

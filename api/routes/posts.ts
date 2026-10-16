@@ -237,8 +237,19 @@ postsRouter.patch('/:id', async (c) => {
   }
   const payload = await readJson<UpdatePostPayload>(c);
   const isArchive = payload?.archived === true;
-  if (!payload || (!isArchive && typeof payload.pinned !== 'boolean') || !isOptionalBoolean(payload.archived)) {
+  if (
+    !payload ||
+    !isOptionalBoolean(payload.archived) ||
+    !isOptionalBoolean(payload.pinned) ||
+    !isOptionalString(payload.title) ||
+    (!isArchive && payload.pinned === undefined && payload.title === undefined)
+  ) {
     return c.json(INVALID_JSON_RESPONSE, 400);
+  }
+  // タイトルは投稿時と同じく改行をスペースに置換して前後の空白を除く（空文字は不可）
+  const newTitle = payload.title?.replace(/[\r\n]+/g, ' ').trim();
+  if (payload.title !== undefined && !newTitle) {
+    return c.json({ error: 'Title is required', message: 'タイトルを入力してください' }, 400);
   }
   const notion = getNotionClient(env.NOTION_API_KEY);
 
@@ -251,13 +262,17 @@ postsRouter.patch('/:id', async (c) => {
       await notion.pages.update({ page_id: id, archived: true });
       return c.json({ success: true, id, archived: true });
     }
-    const { pinnedKey } = await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID);
+    const { pinnedKey, titleKey } = await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID);
 
     const properties: Record<string, any> = {};
     if (typeof payload.pinned === 'boolean' && pinnedKey) {
       properties[pinnedKey] = {
         checkbox: payload.pinned,
       };
+    }
+    if (newTitle) {
+      // 2,000 文字を超えるタイトルも rich_text の複数要素に分割して保存する
+      properties[titleKey] = { title: toRichText(newTitle).richText };
     }
 
     await notion.pages.update({
@@ -269,6 +284,7 @@ postsRouter.patch('/:id', async (c) => {
       success: true,
       id,
       pinned: payload.pinned,
+      title: newTitle,
     });
   } catch (error: unknown) {
     console.error(`Failed to update post ${id}:`, error);

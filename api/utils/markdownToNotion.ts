@@ -1,13 +1,47 @@
-import { toRichText } from './richText.ts';
+import { parseInline, toRichText } from './richText.ts';
 import { limitNestedChildren } from './blocks.ts';
 
 // Markdownの行解析用型定義
 export interface ParsedMarkdownLine {
   level: number;
-  type: 'bulleted_list_item' | 'numbered_list_item' | 'to_do' | 'quote' | 'heading_1' | 'heading_2' | 'heading_3' | 'paragraph';
+  type: 'bulleted_list_item' | 'numbered_list_item' | 'to_do' | 'quote' | 'heading_1' | 'heading_2' | 'heading_3' | 'divider' | 'paragraph';
   content: string;
   checked?: boolean;
 }
+
+// Notion のコードブロックが受け付ける言語（@notionhq/client の LanguageRequest）
+const NOTION_CODE_LANGUAGES = new Set([
+  'abap', 'agda', 'arduino', 'ascii art', 'assembly', 'bash', 'basic', 'bnf', 'c', 'c#', 'c++', 'clojure',
+  'coffeescript', 'coq', 'css', 'dart', 'dhall', 'diff', 'docker', 'ebnf', 'elixir', 'elm', 'erlang', 'f#',
+  'flow', 'fortran', 'gherkin', 'glsl', 'go', 'graphql', 'groovy', 'haskell', 'hcl', 'html', 'idris', 'java',
+  'javascript', 'json', 'julia', 'kotlin', 'latex', 'less', 'lisp', 'livescript', 'llvm ir', 'lua', 'makefile',
+  'markdown', 'markup', 'matlab', 'mathematica', 'mermaid', 'nix', 'notion formula', 'objective-c', 'ocaml',
+  'pascal', 'perl', 'php', 'plain text', 'powershell', 'prolog', 'protobuf', 'purescript', 'python', 'r',
+  'racket', 'reason', 'ruby', 'rust', 'sass', 'scala', 'scheme', 'scss', 'shell', 'smalltalk', 'solidity',
+  'sql', 'swift', 'toml', 'typescript', 'vb.net', 'verilog', 'vhdl', 'visual basic', 'webassembly', 'xml',
+  'yaml', 'java/c/c++/c#',
+]);
+
+// よく使われる略記を Notion の言語名へ対応付ける
+const CODE_LANGUAGE_ALIASES: Record<string, string> = {
+  js: 'javascript', jsx: 'javascript', mjs: 'javascript', cjs: 'javascript',
+  ts: 'typescript', tsx: 'typescript',
+  py: 'python', rb: 'ruby', rs: 'rust', kt: 'kotlin', golang: 'go',
+  sh: 'shell', zsh: 'shell', console: 'shell', ps1: 'powershell',
+  yml: 'yaml', md: 'markdown', dockerfile: 'docker',
+  cs: 'c#', csharp: 'c#', cpp: 'c++', 'objc': 'objective-c',
+  text: 'plain text', txt: 'plain text', plaintext: 'plain text',
+};
+
+/** フェンスの言語指定を Notion の言語名へ変換する（対応外・未指定は plain text） */
+export function toNotionCodeLanguage(info: string): string {
+  const lang = info.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
+  const resolved = CODE_LANGUAGE_ALIASES[lang] ?? lang;
+  return NOTION_CODE_LANGUAGES.has(resolved) ? resolved : 'plain text';
+}
+
+const FENCE_PATTERN = /^\s*```(.*)$/;
+const DIVIDER_PATTERN = /^(?:-{3,}|\*{3,}|_{3,})$/;
 
 // 1行のMarkdownを行頭インデントとブロック種別にパース
 export function parseMarkdownLine(line: string): ParsedMarkdownLine {
@@ -18,6 +52,11 @@ export function parseMarkdownLine(line: string): ParsedMarkdownLine {
 
   if (!trimmed) {
     return { level: 0, type: 'paragraph', content: '' };
+  }
+
+  // 区切り線: --- / *** / ___（箇条書きより先に判定する）
+  if (DIVIDER_PATTERN.test(trimmed)) {
+    return { level: 0, type: 'divider', content: trimmed };
   }
 
   // チェックボックス (To-Do): - [ ] または - [x]
@@ -81,10 +120,12 @@ export function parseMarkdownLine(line: string): ParsedMarkdownLine {
 
 // パース結果からNotion API用ブロックオブジェクトを生成
 export function createNotionBlock(item: ParsedMarkdownLine): any {
-  // 2,000 文字を超える行は rich_text の複数要素に分割する
-  const rich_text = item.content ? toRichText(item.content).richText : [];
+  // インライン装飾を解釈し、2,000 文字を超える要素は rich_text の複数要素に分割する
+  const rich_text = item.content ? parseInline(item.content) : [];
 
   switch (item.type) {
+    case 'divider':
+      return { object: 'block' as const, type: 'divider' as const, divider: {} };
     case 'bulleted_list_item':
       return {
         object: 'block' as const,
@@ -137,6 +178,15 @@ export function createNotionBlock(item: ParsedMarkdownLine): any {
   }
 }
 
+// フェンス内のコードから code ブロックを生成（行単位の解析・インライン装飾の解釈はしない）
+export function createCodeBlock(code: string, info: string): any {
+  return {
+    object: 'block' as const,
+    type: 'code' as const,
+    code: { rich_text: code ? toRichText(code).richText : [], language: toNotionCodeLanguage(info) },
+  };
+}
+
 // Markdown文字列をNotionネイティブ階層ブロック構造（children）へ変換
 export function parseMarkdownToNotionBlocks(markdown: string): any[] {
   if (!markdown || !markdown.trim()) return [];
@@ -154,7 +204,29 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
   // 直前に空段落を出力したか（連続する空行を1つの空段落にまとめるため）
   let lastWasBlank = false;
 
+  // 開いているコードフェンス（閉じられなければ末尾までをコードとして扱う。CommonMark と同じ）
+  let fence: { info: string; lines: string[] } | null = null;
+
   for (const rawLine of lines) {
+    if (fence) {
+      if (/^\s*```\s*$/.test(rawLine)) {
+        rootBlocks.push(createCodeBlock(fence.lines.join('\n'), fence.info));
+        fence = null;
+      } else {
+        fence.lines.push(rawLine.replace(/\r$/, ''));
+      }
+      continue;
+    }
+
+    // コードフェンスの開始: ネストを解除してルートに配置する
+    const fenceMatch = rawLine.match(FENCE_PATTERN);
+    if (fenceMatch) {
+      stack.length = 0;
+      lastWasBlank = false;
+      fence = { info: fenceMatch[1], lines: [] };
+      continue;
+    }
+
     const item = parseMarkdownLine(rawLine);
 
     // 空行はネストをリセットし、連続する空行は1つの空段落にまとめる（先頭の空行は出力しない）
@@ -170,8 +242,8 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
 
     const block = createNotionBlock(item);
 
-    // 見出しはネストの親にせず、スタックをクリアしてルートに配置
-    if (['heading_1', 'heading_2', 'heading_3'].includes(item.type)) {
+    // 見出し・区切り線はネストの親にせず、スタックをクリアしてルートに配置
+    if (['heading_1', 'heading_2', 'heading_3', 'divider'].includes(item.type)) {
       stack.length = 0;
       rootBlocks.push(block);
       continue;
@@ -214,6 +286,8 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
       }
     }
   }
+
+  if (fence) rootBlocks.push(createCodeBlock(fence.lines.join('\n'), fence.info));
 
   // childrenが空のブロックから children プロパティを削除（APIエラー防止）
   function cleanEmptyChildren(blocks: any[]) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMarkdownLine, parseMarkdownToNotionBlocks } from './markdownToNotion.ts';
+import { parseMarkdownLine, parseMarkdownToNotionBlocks, toNotionCodeLanguage } from './markdownToNotion.ts';
 
 // ブロックのテキストを取り出すテスト用ヘルパー
 function textOf(block: any): string {
@@ -157,5 +157,66 @@ describe('parseMarkdownToNotionBlocks', () => {
     const blocks = parseMarkdownToNotionBlocks(['- a', '## h', '  - b'].join('\n'));
     expect(blocks.map((b) => b.type)).toEqual(['bulleted_list_item', 'heading_2', 'bulleted_list_item']);
     expect(childrenOf(blocks[0])).toBeUndefined();
+  });
+});
+
+describe('インライン装飾・コードブロック・区切り線', () => {
+  it('各ブロックの本文でインライン装飾を解釈する', () => {
+    const [item] = parseMarkdownToNotionBlocks('- **重要** な [資料](https://example.com)');
+    expect(item.type).toBe('bulleted_list_item');
+    expect(item.bulleted_list_item.rich_text).toEqual([
+      { type: 'text', text: { content: '重要' }, annotations: { bold: true } },
+      { type: 'text', text: { content: ' な ' } },
+      { type: 'text', text: { content: '資料', link: { url: 'https://example.com' } } },
+    ]);
+  });
+
+  it('フェンスで囲まれた範囲は code ブロックになり、中身は行単位で解析しない', () => {
+    const md = ['前', '```ts', 'const a = 1;', '', '- not list', '**not bold**', '```', '後'].join('\n');
+    const blocks = parseMarkdownToNotionBlocks(md);
+    expect(blocks.map((b) => b.type)).toEqual(['paragraph', 'code', 'paragraph']);
+    expect(blocks[1].code.language).toBe('typescript');
+    expect(textOf(blocks[1])).toBe('const a = 1;\n\n- not list\n**not bold**');
+    expect(blocks[1].code.rich_text.every((t: any) => t.annotations === undefined)).toBe(true);
+  });
+
+  it('リスト中のフェンスはネストを解除してルートに置く', () => {
+    const blocks = parseMarkdownToNotionBlocks(['- a', '  ```', '  x', '  ```', '  - b'].join('\n'));
+    expect(blocks.map((b) => b.type)).toEqual(['bulleted_list_item', 'code', 'bulleted_list_item']);
+    expect(childrenOf(blocks[0])).toBeUndefined();
+  });
+
+  it('閉じていないフェンスは末尾までをコードとして扱う', () => {
+    const blocks = parseMarkdownToNotionBlocks(['```python', 'print(1)', '# not heading'].join('\n'));
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].code.language).toBe('python');
+    expect(textOf(blocks[0])).toBe('print(1)\n# not heading');
+  });
+
+  it('空のコードブロックと 2,000 文字を超えるコード', () => {
+    expect(parseMarkdownToNotionBlocks('```\n```')[0].code.rich_text).toEqual([]);
+    const long = parseMarkdownToNotionBlocks(`\`\`\`\n${'x'.repeat(4500)}\n\`\`\``)[0];
+    expect(long.code.rich_text.map((t: any) => t.text.content.length)).toEqual([2000, 2000, 500]);
+  });
+
+  it('言語指定を Notion の言語名へ変換し、対応外・未指定は plain text にする', () => {
+    expect(toNotionCodeLanguage('ts')).toBe('typescript');
+    expect(toNotionCodeLanguage('JavaScript')).toBe('javascript');
+    expect(toNotionCodeLanguage('c++')).toBe('c++');
+    expect(toNotionCodeLanguage('sh title="x"')).toBe('shell');
+    expect(toNotionCodeLanguage('brainfuck')).toBe('plain text');
+    expect(toNotionCodeLanguage('')).toBe('plain text');
+  });
+
+  it('--- / *** / ___ の単独行は区切り線になり、ネストを解除する', () => {
+    const blocks = parseMarkdownToNotionBlocks(['- a', '---', '  - b', '***', '___', '----'].join('\n'));
+    expect(blocks.map((b) => b.type)).toEqual(['bulleted_list_item', 'divider', 'bulleted_list_item', 'divider', 'divider', 'divider']);
+    expect(blocks[1]).toEqual({ object: 'block', type: 'divider', divider: {} });
+    expect(childrenOf(blocks[0])).toBeUndefined();
+  });
+
+  it('区切り線でない記号の並びは従来どおり解釈する', () => {
+    expect(parseMarkdownLine('-- a').type).toBe('paragraph');
+    expect(parseMarkdownLine('* * *').type).toBe('bulleted_list_item');
   });
 });

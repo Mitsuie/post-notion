@@ -243,23 +243,12 @@ export function InputBar({
         placeholder="いま考えていること、タイトル... (改行不可 / Cmd+Enter で即送信)"
         aria-label="タイトル"
         rows={2}
-        className="input-title"
+        className="input-field input-title"
         style={{
-          width: '100%',
-          background: 'var(--bg-tertiary)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-md)',
-          padding: '10px 12px',
-          color: 'var(--text-primary)',
           lineHeight: 1.5,
           resize: 'none',
-          fontFamily: 'inherit',
-          outline: 'none',
           marginBottom: '8px',
-          transition: 'border-color 0.15s ease',
         }}
-        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
-        onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
       />
 
       {/* 本文入力エリア（タイトル入力欄とタグ表示部分の間に新設） */}
@@ -271,24 +260,13 @@ export function InputBar({
         placeholder="本文・詳細メモ (任意、改行可、Markdown対応)..."
         aria-label="本文"
         rows={3}
-        className="input-body"
+        className="input-field input-body"
         style={{
-          width: '100%',
-          background: 'var(--bg-tertiary)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-md)',
-          padding: '10px 12px',
-          color: 'var(--text-primary)',
           lineHeight: 1.6,
           resize: 'vertical',
-          fontFamily: 'inherit',
-          outline: 'none',
           marginTop: '0px',
           marginBottom: selectedTags.length > 0 ? '12px' : '8px',
-          transition: 'border-color 0.15s ease',
         }}
-        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
-        onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
       />
 
       {/* 選択されたタグのバッジ（タイトル入力欄・本文欄の下に配置） */}
@@ -358,56 +336,28 @@ export function InputBar({
           {/* ピン留めトグルボタン */}
           <button
             type="button"
-            className="mobile-icon-btn"
+            className="chip-btn chip-btn-lg chip-btn-pin mobile-icon-btn"
             onClick={() => setIsPinned(!isPinned)}
-          aria-pressed={isPinned}
-            style={{
-              background: isPinned ? 'var(--pinned-bg)' : 'var(--bg-tertiary)',
-              border: `1px solid ${isPinned ? 'var(--pinned-border)' : 'var(--border-color)'}`,
-              borderRadius: 'var(--radius-sm)',
-              padding: '6px 12px',
-              color: isPinned ? 'var(--pinned-color)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            aria-pressed={isPinned}
             title={isPinned ? 'ピン固定を解除' : 'タイムライン最上部にピン固定'}
           >
             <Pin size={14} style={{ fill: isPinned ? 'currentColor' : 'none' }} />
             <span className="hide-on-mobile">{isPinned ? 'ピン固定中' : 'ピン留め'}</span>
-            <span className="show-on-mobile" style={{ display: 'none' }}>固定</span>
+            <span className="show-on-mobile">固定</span>
           </button>
 
           {/* 日報紐付けトグルボタン (日報DB設定時のみ表示) */}
           {isDailyReportConfigured && (
             <button
               type="button"
-              className="mobile-icon-btn"
+              className="chip-btn chip-btn-lg mobile-icon-btn"
               onClick={() => setLinkDailyReport(!linkDailyReport)}
-            aria-pressed={linkDailyReport}
-              style={{
-                background: linkDailyReport ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                border: `1px solid ${linkDailyReport ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                borderRadius: 'var(--radius-sm)',
-                padding: '6px 12px',
-                color: linkDailyReport ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontWeight: linkDailyReport ? 600 : 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
+              aria-pressed={linkDailyReport}
               title={linkDailyReport ? '当日の日報ページに自動連携（クリックで解除）' : '日報への連携をスキップ（クリックで連携）'}
             >
               <Calendar size={14} />
               <span className="hide-on-mobile">{linkDailyReport ? '日報: ON' : '日報: OFF'}</span>
-              <span className="show-on-mobile" style={{ display: 'none' }}>日報</span>
+              <span className="show-on-mobile">日報</span>
             </button>
           )}
         </div>

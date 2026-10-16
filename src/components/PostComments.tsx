@@ -110,23 +110,12 @@ export function PostComments({
             placeholder="返信や考察メモを入力 (改行可、Markdown対応)..."
             aria-label="返信・コメント"
             rows={3}
-            className="input-comment"
+            className="input-field input-comment"
             autoFocus
             style={{
-              width: '100%',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              padding: '10px 12px',
-              color: 'var(--text-primary)',
               lineHeight: 1.5,
               resize: 'vertical',
-              fontFamily: 'inherit',
-              outline: 'none',
-              transition: 'border-color 0.15s ease',
             }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
-            onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
           />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>

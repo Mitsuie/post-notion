@@ -69,6 +69,7 @@ Cloudflare Pages（エッジ実行・完全無料）およびローカルNode.js
 | **Notion連携** | `@notionhq/client`, `notion-to-md` | Notion公式SDK、ブロックMarkdown相互変換 |
 | **サーバー (Node.js)**| `@hono/node-server`, `dotenv`, `tsx` | スタンドアロン実行・ローカル配信 |
 | **ホスティング (本番)**| Cloudflare Pages + Pages Functions | エッジサーバーレスホスティング (手法A) |
+| **テスト・CI** | Vitest, GitHub Actions | 純粋関数・ルートの単体テスト、型チェック・ビルドの自動実行 |
 | **閉域網公開 (将来)** | Tailscale (`tailscale serve`) | 自宅WSLセルフホスト・認証なし0秒起動 (手法B) |
 
 ---
@@ -80,26 +81,27 @@ Cloudflare Pages（エッジ実行・完全無料）およびローカルNode.js
 ```text
 post-notion/
 ├── src/                        # フロントエンド (React + TypeScript + Vite)
-│   ├── components/             # UIコンポーネント (Timeline, InputBar, SessionExpiredModal, ErrorBoundary等)
-│   ├── hooks/                  # TanStack Query / カスタムフック (usePosts, useDraft等)
+│   ├── components/             # UIコンポーネント (Timeline, InputBar, PostCard, MarkdownView, Toast, SessionExpiredModal, ErrorBoundary等)
+│   ├── hooks/                  # TanStack Query / カスタムフック (usePosts, useDraft, useTimelineFilter等)
 │   ├── types/                  # クライアント側型定義
-│   ├── utils/                  # apiClient, pwa, 日時フォーマッター、ヘルパー関数
+│   ├── utils/                  # apiClient, postsCache, storage (localStorage集約), pwa, 日時フォーマッター等
 │   ├── App.tsx                 # アプリケーションルート (セッション失効モーダル連携)
 │   └── main.tsx                # エントリーポイント (ErrorBoundary配置)
 ├── api/                        # 共通BFFロジック (Hono)
-│   ├── app.ts                  # Honoアプリケーション本体 (CORS、ルーティング定義)
+│   ├── app.ts                  # Honoアプリケーション本体 (CSRF対策・セキュリティヘッダー、ルーティング定義)
 │   ├── notion.ts               # Notion SDKクライアント初期化・環境変数バリデーション
 │   ├── types.ts                # バックエンド・API型定義
-│   └── routes/
-│       ├── posts.ts            # GET: タイムライン取得 / POST: 投稿作成 / コメントCRUD
-│       ├── tags.ts             # GET: タグ管理DBからの一覧取得
-│       └── status.ts           # GET: Notion接続疎通診断 (ヘルスチェック)
+│   ├── routes/
+│   │   ├── posts.ts            # GET: タイムライン取得 / POST: 投稿作成 / PATCH: ピン留め・タイトル編集・アーカイブ / コメントCRUD
+│   │   ├── tags.ts             # GET: タグ管理DBからの一覧取得
+│   │   └── status.ts           # GET: Notion接続疎通診断 (ヘルスチェック)
+│   └── utils/                  # 純粋関数・共通処理 (Markdown→Notionブロック変換、rich_text分割、スキーマキャッシュ、入力検証等)
 ├── functions/                  # 【Cloudflare Pages Functions 用】
 │   └── api/
 │       └── [[route]].ts        # HonoアプリをPages Functionsにマウント
 ├── server/                     # 【Node.js スタンドアロン実行用】
 │   └── index.ts                # dist/静的配信 + Hono APIマウント (Port 3000)
-├── public/                     # Service Worker (sw.js), PWAマニフェスト、アプリアイコン
+├── public/                     # Service Worker (sw.js), PWAマニフェスト、アプリアイコン (通常・maskable・apple-touch-icon)
 ├── index.html                  # HTMLテンプレート (起動前インラインフェイルセーフUI内蔵)
 ├── package.json
 ├── tsconfig.json

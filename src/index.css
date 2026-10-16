@@ -304,6 +304,75 @@ body {
 }
 
 /* ==========================================================================
+   入力欄・チップ型ボタンの共通スタイル
+   （下のモバイル用メディアクエリで上書きできるよう、それより前に定義する）
+   ========================================================================== */
+/* 複数行入力欄。フォーカス時の枠線色は :focus で表現する */
+.input-field {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.input-field:focus {
+  border-color: var(--border-focus);
+}
+
+/* チップ型トグルボタン（タイムライン操作バー・入力バー）
+   状態は aria-pressed / aria-expanded と、開閉とは別の「適用中」を data-active で表現する */
+.chip-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  min-height: 34px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.chip-btn-lg {
+  padding: 6px 12px;
+  min-height: auto;
+  font-size: 0.8rem;
+}
+.chip-btn[aria-pressed="true"],
+.chip-btn[aria-expanded="true"],
+.chip-btn[data-active="true"] {
+  background: var(--accent-light);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.chip-btn[aria-pressed="true"],
+.chip-btn[data-active="true"] {
+  font-weight: 600;
+}
+.chip-btn-pin[aria-pressed="true"] {
+  background: var(--pinned-bg);
+  border-color: var(--pinned-border);
+  color: var(--pinned-color);
+  font-weight: 500;
+}
+.chip-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+/* キーボード操作時のみフォーカスリングを表示 */
+.chip-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
    モバイルレスポンシブ ユーティリティ (幅 600px 以下)
    ========================================================================== */
 /* 入力欄の文字サイズ（モバイルでは下のメディアクエリで 16px に上書き） */
@@ -311,6 +380,11 @@ body {
 .input-body { font-size: 0.875rem; }
 .input-comment { font-size: 0.85rem; }
 .input-date { font-size: 0.75rem; }
+
+/* スマホ画面でのみ表示するテキスト用（既定は非表示。下のメディアクエリで表示） */
+.show-on-mobile {
+  display: none;
+}
 
 @media (max-width: 600px) {
   /* iOS Safari は 16px 未満の入力欄にフォーカスすると自動ズームするため、モバイル幅では 16px にする */
@@ -326,7 +400,7 @@ body {
 
   /* スマホ画面でのみ表示するテキスト用 */
   .show-on-mobile {
-    display: inline !important;
+    display: inline;
   }
 
   /* 入力バー・ツールバー等のアイコンボタン最適化 */

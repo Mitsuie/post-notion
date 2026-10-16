@@ -305,7 +305,7 @@ export function PostCard({
           >
             <FileText size={13} />
             <span className="hide-on-mobile">{showDetails ? '本文を閉じる' : '本文を表示'}</span>
-            <span className="show-on-mobile" style={{ display: 'none' }}>{showDetails ? '閉じる' : '本文'}</span>
+            <span className="show-on-mobile">{showDetails ? '閉じる' : '本文'}</span>
             {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
 
@@ -341,7 +341,7 @@ export function PostCard({
             >
               <ExternalLink size={13} />
               <span className="hide-on-mobile">Notionで開く</span>
-              <span className="show-on-mobile" style={{ display: 'none' }}>Notion</span>
+              <span className="show-on-mobile">Notion</span>
             </a>
           )}
 
@@ -363,7 +363,7 @@ export function PostCard({
               style={{ color: commentsCount > 0 || showComments ? 'var(--accent-primary)' : undefined }}
             />
             <span className="hide-on-mobile">返信一覧</span>
-            <span className="show-on-mobile" style={{ display: 'none' }}>返信</span>
+            <span className="show-on-mobile">返信</span>
             {commentsCount > 0 && <span>({commentsCount})</span>}
           </button>
 
@@ -382,7 +382,7 @@ export function PostCard({
           >
             <MessageSquarePlus size={13} />
             <span className="hide-on-mobile">返信</span>
-            <span className="show-on-mobile" style={{ display: 'none' }}>返信</span>
+            <span className="show-on-mobile">返信</span>
           </button>
 
           {/* 4. その他の操作（送信中の未確定投稿では表示しない） */}

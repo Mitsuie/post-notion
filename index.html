@@ -4,11 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <link id="app-favicon" rel="icon" type="image/png" href="/icon_light.png" />
-  <link rel="apple-touch-icon" href="/icon_dark.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.json" />
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
+  <meta name="theme-color" content="#f8fafc" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -45,6 +45,16 @@
         --boot-primary: #38bdf8;
         --boot-primary-text: #0a0f1d;
       }
+    }
+    /* 保存済みのテーマを OS 設定より優先する（OS がダークでもライトを選んでいれば起動画面もライト） */
+    html[data-theme="light"] {
+      --boot-bg: #f8fafc;
+      --boot-text: #0f172a;
+      --boot-muted: #64748b;
+      --boot-card: rgba(255, 255, 255, 0.9);
+      --boot-border: #e2e8f0;
+      --boot-primary: #0284c7;
+      --boot-primary-text: #ffffff;
     }
     html[data-theme="dark"] {
       --boot-bg: #0a0f1d;
@@ -148,11 +158,17 @@
     }
   </style>
   <script>
-    // テーマの初期即時適用（チラつき防止）
+    // テーマの初期即時適用（チラつき防止）。保存値がなければ OS のカラースキームに従う（src/App.tsx と同じ判定）
+    var initialTheme = 'light';
     try {
-      var savedTheme = localStorage.getItem('post-notion-theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
+      initialTheme = localStorage.getItem('post-notion-theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     } catch(e) {}
+    document.documentElement.setAttribute('data-theme', initialTheme);
+    if (initialTheme === 'dark') {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0f1d');
+      document.getElementById('app-favicon').setAttribute('href', '/icon_dark.png');
+    }
   </script>
 </head>
 

@@ -183,30 +183,22 @@ export function InputBar({
     }
   };
 
+  // 改行を含む貼り付けは、改行をスペースに置換してブラウザ標準の挿入として扱う
+  // （onChange 側で置換すると React が値を書き換えるため、Undo 履歴が失われ、キャレットも末尾へ飛ぶ）
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasteText = e.clipboardData.getData('text');
+    if (!/[\r\n]/.test(pasteText)) return;
+    const sanitized = pasteText.replace(/[\r\n]+/g, ' ');
+    if (document.execCommand('insertText', false, sanitized)) e.preventDefault();
+    // execCommand 非対応時は既定の貼り付けに任せ、onChange で改行を置換する
+  };
+
   // 本文欄キーボードイベント（Markdown自動補完、Tab階層インデント、Cmd/Ctrl+Enter送信フック）
   const { handleKeyDown: handleBodyKeyDown } = useMarkdownShortcuts({
     textareaRef: bodyTextareaRef,
     onChange: setBody,
     onSend: handleSend,
   });
-
-  // ペースト時にも改行をスペースに置換して挿入
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    const pasteText = e.clipboardData.getData('text');
-    const sanitized = pasteText.replace(/[\r\n]+/g, ' ');
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const updated = content.substring(0, start) + sanitized + content.substring(end);
-    setContent(updated);
-
-    setTimeout(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + sanitized.length;
-    }, 0);
-  };
 
   const toggleTag = (tag: Tag) => {
     if (tagLimit === 1) {

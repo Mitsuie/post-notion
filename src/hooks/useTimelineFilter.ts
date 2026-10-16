@@ -8,6 +8,7 @@ export interface FilterState {
   customStartDate: string;
   customEndDate: string;
   selectedTagIds: string[];
+  keyword: string; // タイトルに含むキーワード
 }
 
 export const DEFAULT_FILTER: FilterState = {
@@ -15,13 +16,27 @@ export const DEFAULT_FILTER: FilterState = {
   customStartDate: '',
   customEndDate: '',
   selectedTagIds: [],
+  keyword: '',
 };
+
+// すべての条件を解除した状態（全期間・全タグ・キーワードなし）
+export const CLEARED_FILTER: FilterState = {
+  datePreset: 'all',
+  customStartDate: '',
+  customEndDate: '',
+  selectedTagIds: [],
+  keyword: '',
+};
+
+// キーワードの最大文字数（BFF 側の上限と合わせる）
+export const MAX_KEYWORD_LENGTH = 100;
 
 // GET /api/posts に渡す絞り込み・並び順の条件（値はすべて文字列）
 export interface PostsQueryParams {
   from?: string; // 作成日時の下限（ISO 8601）
   to?: string; // 作成日時の上限（ISO 8601）
   tags?: string; // タグIDのカンマ区切り（OR 条件）
+  q?: string; // タイトルに含むキーワード
   order: 'desc' | 'asc';
   pin: '1' | '0';
 }
@@ -76,6 +91,11 @@ export function toPostsQueryParams(
     params.tags = [...filter.selectedTagIds].sort().join(',');
   }
 
+  const keyword = filter.keyword.trim();
+  if (keyword) {
+    params.q = Array.from(keyword).slice(0, MAX_KEYWORD_LENGTH).join('');
+  }
+
   return params;
 }
 
@@ -101,8 +121,10 @@ export function useTimelineFilter({
   // フィルター適用判定
   const isDateFiltered = filter.datePreset !== 'all';
   const isTagFiltered = filter.selectedTagIds.length > 0;
-  const isFiltered = isDateFiltered || isTagFiltered;
-  const activeFilterCount = (isDateFiltered ? 1 : 0) + (isTagFiltered ? 1 : 0);
+  const isKeywordFiltered = filter.keyword.trim() !== '';
+  const isFiltered = isDateFiltered || isTagFiltered || isKeywordFiltered;
+  const activeFilterCount =
+    (isDateFiltered ? 1 : 0) + (isTagFiltered ? 1 : 0) + (isKeywordFiltered ? 1 : 0);
 
   // サーバー側で絞り込み・並べ替えを行うためのクエリ条件
   const queryParams = useMemo(
@@ -152,6 +174,7 @@ export function useTimelineFilter({
     tagMap,
     isDateFiltered,
     isTagFiltered,
+    isKeywordFiltered,
     isFiltered,
     activeFilterCount,
     queryParams,

@@ -97,3 +97,15 @@ describe('toPostsQueryParams', () => {
     expect(toPostsQueryParams(DEFAULT_FILTER, 'desc', true, NOW)).toMatchObject({ order: 'desc', pin: '1' });
   });
 });
+
+describe('toPostsQueryParams（キーワード）', () => {
+  it('前後の空白を除いて q に設定し、空なら付けない', () => {
+    expect(toPostsQueryParams(filterOf({ keyword: '  Notion  ' }), 'desc', false, NOW).q).toBe('Notion');
+    expect(toPostsQueryParams(filterOf({ keyword: '   ' }), 'desc', false, NOW).q).toBeUndefined();
+  });
+
+  it('100 文字で切り詰める（絵文字を分断しない）', () => {
+    const q = toPostsQueryParams(filterOf({ keyword: '😀'.repeat(150) }), 'desc', false, NOW).q!;
+    expect(Array.from(q)).toHaveLength(100);
+  });
+});

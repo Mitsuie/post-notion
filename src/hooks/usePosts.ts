@@ -29,7 +29,10 @@ export function usePostsQuery(params: PostsQueryParams) {
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
     // 条件切り替え中は直前の結果を表示し、ちらつきを防ぐ
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, // 5分間キャッシュ
+    // 別端末での投稿を反映するため、1分以上経過していればタブ・アプリへの復帰時に再取得する
+    // （読み込み済みの全ページを順に再取得する。maxPages は先頭ページが破棄されるため使わない）
+    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60,
   });
 
   // 読み込み済みの全ページを1つの一覧に平坦化

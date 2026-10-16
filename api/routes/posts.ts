@@ -21,8 +21,24 @@ import { toRichText } from '../utils/richText.ts';
 import { chunk, CHILDREN_MAX } from '../utils/blocks.ts';
 import { resolveDailyReportPageId } from '../utils/dailyReport.ts';
 import { syncCommentsCount, incrementCommentsCount } from '../utils/comments.ts';
+import { isNotionId, readJson, assertPostsPage } from '../utils/validate.ts';
+import { toClientError } from '../utils/errors.ts';
 
 export const postsRouter = new Hono<{ Bindings: Bindings }>();
+
+const INVALID_ID_RESPONSE = { error: 'Invalid post id', message: '投稿IDの形式が正しくありません' };
+const INVALID_JSON_RESPONSE = { error: 'Invalid request body', message: 'リクエストの形式が正しくありません' };
+
+const isOptionalBoolean = (v: unknown) => v === undefined || typeof v === 'boolean';
+const isOptionalString = (v: unknown) => v === undefined || typeof v === 'string';
+
+// /:id 配下（本文・コメント）は投稿IDの形式を検証してから処理する
+postsRouter.use('/:id/*', async (c, next) => {
+  if (!isNotionId(c.req.param('id') ?? '')) {
+    return c.json(INVALID_ID_RESPONSE, 400);
+  }
+  await next();
+});
 
 // タイムライン一覧取得
 postsRouter.get('/', async (c) => {
@@ -65,9 +81,9 @@ postsRouter.get('/', async (c) => {
       hasMore: response.has_more,
     });
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('Failed to fetch posts from Notion:', error);
-    return c.json({ error: 'Failed to fetch posts', message: errMsg }, 500);
+    const { status, message } = toClientError(error, '投稿一覧の取得に失敗しました');
+    return c.json({ error: 'Failed to fetch posts', message }, status);
   }
 });
 
@@ -82,9 +98,21 @@ postsRouter.post('/', async (c) => {
     );
   }
 
-  const payload = await c.req.json<CreatePostPayload>();
-  if (!payload.title || !payload.title.trim()) {
-    return c.json({ error: 'Title is required' }, 400);
+  const payload = await readJson<CreatePostPayload>(c);
+  if (
+    !payload ||
+    !isOptionalString(payload.body) ||
+    !isOptionalBoolean(payload.pinned) ||
+    !isOptionalBoolean(payload.linkDailyReport) ||
+    !isOptionalString(payload.clientDate) ||
+    (payload.tagIds !== undefined &&
+      (!Array.isArray(payload.tagIds) ||
+        !payload.tagIds.every((id) => typeof id === 'string' && isNotionId(id))))
+  ) {
+    return c.json(INVALID_JSON_RESPONSE, 400);
+  }
+  if (typeof payload.title !== 'string' || !payload.title.trim()) {
+    return c.json({ error: 'Title is required', message: 'タイトルを入力してください' }, 400);
   }
 
   const notion = getNotionClient(env.NOTION_API_KEY);
@@ -182,25 +210,13 @@ postsRouter.post('/', async (c) => {
       dailyReportLinked,
       warning: warnings.length > 0 ? warnings.join('\n') : undefined,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to create post in Notion:', error);
     // Notion 側でプロパティ名が変更された可能性があるため、次回はスキーマを取得し直す
     if (isValidationError(error)) invalidateSchemaCache(env.NOTION_POSTS_DATABASE_ID);
-    const errMsg = error?.message || String(error);
-    if (
-      errMsg.includes('limit of 1') ||
-      (error?.code === 'validation_error' && errMsg.includes('limit'))
-    ) {
-      return c.json(
-        {
-          error: 'Failed to create post',
-          message:
-            'タグのリレーション設定が1件に制限されているため、複数タグを登録できません。タグを1件のみ選択して再送信してください。',
-        },
-        400
-      );
-    }
-    return c.json({ error: 'Failed to create post', message: errMsg }, 500);
+    // タグ1件制限の超過は 400 と案内メッセージに変換される
+    const { status, message } = toClientError(error, '投稿の作成に失敗しました');
+    return c.json({ error: 'Failed to create post', message }, status);
   }
 });
 
@@ -216,10 +232,18 @@ postsRouter.patch('/:id', async (c) => {
   }
 
   const id = c.req.param('id');
-  const payload = await c.req.json<UpdatePostPayload>();
+  if (!isNotionId(id)) {
+    return c.json(INVALID_ID_RESPONSE, 400);
+  }
+  const payload = await readJson<UpdatePostPayload>(c);
+  if (!payload || typeof payload.pinned !== 'boolean') {
+    return c.json(INVALID_JSON_RESPONSE, 400);
+  }
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
+    // Posts DB に属するページのみ更新できる
+    await assertPostsPage(notion, id, env.NOTION_POSTS_DATABASE_ID);
     const { pinnedKey } = await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID);
 
     const properties: Record<string, any> = {};
@@ -240,10 +264,10 @@ postsRouter.patch('/:id', async (c) => {
       pinned: payload.pinned,
     });
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to update post ${id}:`, error);
     if (isValidationError(error)) invalidateSchemaCache(env.NOTION_POSTS_DATABASE_ID);
-    return c.json({ error: 'Failed to update post', message: errMsg }, 500);
+    const { status, message } = toClientError(error, '投稿の更新に失敗しました');
+    return c.json({ error: 'Failed to update post', message }, status);
   }
 });
 
@@ -272,9 +296,9 @@ postsRouter.get('/:id/blocks', async (c) => {
       url: page.url || `https://notion.so/${id.replace(/-/g, '')}`,
     });
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to fetch blocks for post ${id}:`, error);
-    return c.json({ error: 'Failed to fetch blocks', message: errMsg }, 500);
+    const { status, message } = toClientError(error, '本文の取得に失敗しました');
+    return c.json({ error: 'Failed to fetch blocks', message }, status);
   }
 });
 
@@ -316,9 +340,9 @@ postsRouter.get('/:id/comments', async (c) => {
 
     return c.json({ comments, commentsCount: actualCount });
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to fetch comments for post ${id}:`, error);
-    return c.json({ error: 'Failed to fetch comments', message: errMsg }, 500);
+    const { status, message } = toClientError(error, 'コメントの取得に失敗しました');
+    return c.json({ error: 'Failed to fetch comments', message }, status);
   }
 });
 
@@ -334,16 +358,27 @@ postsRouter.post('/:id/comments', async (c) => {
   }
 
   const id = c.req.param('id');
-  const payload = await c.req.json<CreateCommentPayload>();
+  const payload = await readJson<CreateCommentPayload>(c);
+  if (
+    !payload ||
+    !isOptionalString(payload.text) ||
+    (payload.discussionId !== undefined &&
+      (typeof payload.discussionId !== 'string' || !isNotionId(payload.discussionId)))
+  ) {
+    return c.json(INVALID_JSON_RESPONSE, 400);
+  }
   const text = payload.text?.trim();
 
   if (!text) {
-    return c.json({ error: 'Comment text is required' }, 400);
+    return c.json({ error: 'Comment text is required', message: 'コメントを入力してください' }, 400);
   }
 
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
+    // Posts DB に属するページのみコメントできる（取得したページはコメント件数の更新で使い回す）
+    const page = await assertPostsPage(notion, id, env.NOTION_POSTS_DATABASE_ID);
+
     const createArgs: any = {
       rich_text: toRichText(text).richText,
     };
@@ -370,12 +405,12 @@ postsRouter.post('/:id/comments', async (c) => {
     };
 
     // コメント追加回数のインクリメント
-    const updatedCount = await incrementCommentsCount(notion, id);
+    const updatedCount = await incrementCommentsCount(notion, id, page);
 
     return c.json({ comment: resultItem, commentsCount: updatedCount }, 201);
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`Failed to create comment for post ${id}:`, error);
-    return c.json({ error: 'Failed to create comment', message: errMsg }, 500);
+    const { status, message } = toClientError(error, 'コメントの送信に失敗しました');
+    return c.json({ error: 'Failed to create comment', message }, status);
   }
 });

@@ -113,3 +113,19 @@ describe('isNotionId', () => {
     expect(isNotionId('../etc/passwd')).toBe(false);
   });
 });
+
+describe('normalizeId / readJson', async () => {
+  const { normalizeId, readJson } = await import('./validate.ts');
+
+  it('normalizeId はハイフンを除去して小文字化する', () => {
+    expect(normalizeId('ABCDEF01-2345-6789-ABCD-EF0123456789')).toBe('abcdef0123456789abcdef0123456789');
+  });
+
+  it('readJson はオブジェクト以外・解析失敗を null にする', async () => {
+    const req = (json: () => Promise<unknown>) => ({ req: { json } });
+    expect(await readJson(req(async () => ({ a: 1 })))).toEqual({ a: 1 });
+    expect(await readJson(req(async () => 'text'))).toBeNull();
+    expect(await readJson(req(async () => null))).toBeNull();
+    expect(await readJson(req(async () => { throw new SyntaxError('bad'); }))).toBeNull();
+  });
+});

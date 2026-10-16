@@ -1,5 +1,6 @@
 import type { Client } from '@notionhq/client';
 import { getDailyReportDateKey } from './schema.ts';
+import { toClientError } from './errors.ts';
 
 export interface ResolveDailyReportResult {
   dailyPageId?: string;
@@ -60,10 +61,11 @@ export async function resolveDailyReportPageId(
     console.warn(`[dailyReport] ${warning}`);
     return { warning };
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    console.warn('[dailyReport] 日報リレーション解決中にエラーが発生:', errMsg);
+    console.warn('[dailyReport] 日報リレーション解決中にエラーが発生:', error);
+    // Notion の生のエラーメッセージは返さず、定型文に変換する
+    const { message } = toClientError(error, '日報の検索に失敗しました');
     return {
-      warning: `日報連携処理中にエラーが発生したためスキップしました: ${errMsg}`,
+      warning: `日報連携処理中にエラーが発生したためスキップしました（${message}）`,
     };
   }
 }

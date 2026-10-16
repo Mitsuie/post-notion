@@ -49,6 +49,7 @@ export type CreatePostPayload = {
 
 export type UpdatePostPayload = {
   pinned?: boolean;
+  archived?: boolean; // true でページをアーカイブ（Notion のゴミ箱へ移動）
 };
 
 export type CommentItem = {

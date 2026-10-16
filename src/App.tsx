@@ -26,7 +26,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 export default function App() {
   const queryClient = useQueryClient();
   const toast = useToast();
-  const { createPost, isCreating, togglePin } = usePostMutations();
+  const { createPost, isCreating, togglePin, archivePost } = usePostMutations();
   const { data: tagsData } = useTags();
   const {
     isDailyReportConfigured,
@@ -121,6 +121,21 @@ export default function App() {
       );
     },
     [togglePin, toast]
+  );
+
+  // 投稿のアーカイブ（削除）ハンドラ
+  const handleArchive = useCallback(
+    (id: string) => {
+      archivePost(id, {
+        onSuccess: () => {
+          toast.info('投稿を削除しました');
+        },
+        onError: (err: unknown) => {
+          toast.error(getErrorMessage(err, '投稿の削除に失敗しました'));
+        },
+      });
+    },
+    [archivePost, toast]
   );
 
   // 手動リフレッシュ
@@ -236,6 +251,7 @@ export default function App() {
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
           onTogglePin={handleTogglePin}
+          onArchive={handleArchive}
         />
       </main>
 

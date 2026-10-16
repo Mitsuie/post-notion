@@ -1,27 +1,45 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, ExternalLink, Calendar } from 'lucide-react';
+import { Pin, MessageCircle, MessageSquarePlus, Clock, Loader2, ChevronDown, ChevronUp, FileText, ExternalLink, Calendar, Trash2 } from 'lucide-react';
 import type { Post, Tag } from '../types';
 import { usePostBlocks } from '../hooks/usePostBlocks';
 import { PostComments } from './PostComments';
+import { PostActionsMenu, type PostActionsMenuItem } from './PostActionsMenu';
 import { formatDate, formatFullDate } from '../utils/date';
 
 interface PostCardProps {
   post: Post;
   availableTags: Tag[];
   onTogglePin?: (id: string, pinned: boolean) => void;
+  onArchive?: (id: string) => void;
 }
 
 export function PostCard({
   post,
   availableTags,
   onTogglePin,
+  onArchive,
 }: PostCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
   // コメント件数は ['posts'] キャッシュの値を直接表示する（コメント取得・投稿時に postsCache 経由で更新される）
   const commentsCount = post.commentsCount ?? 0;
+
+  // 「…」メニューの項目
+  const menuItems: PostActionsMenuItem[] = [];
+  if (onArchive) {
+    menuItems.push({
+      label: '削除',
+      icon: Trash2,
+      danger: true,
+      onSelect: () => {
+        if (window.confirm('この投稿を削除しますか？（Notion のゴミ箱に移動し、30 日間は復元できます）')) {
+          onArchive(post.id);
+        }
+      },
+    });
+  }
 
   // 詳細展開時のみオンデマンドで本文Markdownを取得
   const { data: blocksData, isLoading: isBlocksLoading } = usePostBlocks(showDetails ? post.id : null);
@@ -298,6 +316,9 @@ export function PostCard({
             <span className="hide-on-mobile">返信</span>
             <span className="show-on-mobile" style={{ display: 'none' }}>返信</span>
           </button>
+
+          {/* 4. その他の操作（送信中の未確定投稿では表示しない） */}
+          {!post.isOptimistic && menuItems.length > 0 && <PostActionsMenu items={menuItems} />}
         </div>
       </div>
 

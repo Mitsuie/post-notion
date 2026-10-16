@@ -107,3 +107,36 @@ describe('エラーメッセージの定型化', () => {
     expect(((await res.json()) as { message: string }).message).toContain('1件に制限');
   });
 });
+
+describe('投稿のアーカイブ', () => {
+  const ownPage = { id: PAGE_ID, parent: { database_id: POSTS_DB }, properties: {} };
+
+  it('archived: true で Posts DB のページをアーカイブする', async () => {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return ownPage;
+      if (method === 'patch' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    const res = await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ archived: true }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ success: true, archived: true });
+    const update = notion.mock.calls.find(([args]: any) => args.method === 'patch')![0];
+    expect(update.body).toMatchObject({ archived: true });
+  });
+
+  it('他の DB のページはアーカイブしない（404）', async () => {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return { ...ownPage, parent: { database_id: OTHER_DB } };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ archived: true }))).status).toBe(404);
+    expect(notion.mock.calls.some(([args]: any) => args.method === 'patch')).toBe(false);
+  });
+
+  it('archived が真偽値でない・更新内容がない場合は 400', async () => {
+    expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ archived: 'yes' }))).status).toBe(400);
+    expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ archived: false }))).status).toBe(400);
+    expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({}))).status).toBe(400);
+    expect(notion).not.toHaveBeenCalled();
+  });
+});

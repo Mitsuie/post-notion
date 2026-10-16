@@ -6,6 +6,7 @@ import {
   POSTS_QUERY_KEY,
   prependPost,
   updatePost,
+  removePost,
   snapshotPosts,
   restorePosts,
 } from '../utils/postsCache';
@@ -133,7 +134,33 @@ export function usePostMutations() {
     },
   });
 
+  // 投稿のアーカイブ（楽観的にタイムラインから取り除き、失敗時は元に戻す）
+  const archivePostMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiFetch(`/api/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: true }),
+      });
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
+      const snapshot = snapshotPosts(queryClient);
+      removePost(queryClient, id);
+      return { snapshot };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.snapshot) {
+        restorePosts(queryClient, context.snapshot);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
+    },
+  });
+
   return {
+    archivePost: archivePostMutation.mutate,
     createPost: createPostMutation.mutate,
     createPostAsync: createPostMutation.mutateAsync,
     isCreating: createPostMutation.isPending,

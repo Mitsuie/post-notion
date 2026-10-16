@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "pages:dev": "wrangler pages dev --compatibility-date=2024-01-01",
+    "pages:dev": "wrangler pages dev --compatibility-date=2025-07-18",
     "server:dev": "tsx watch server/index.ts",
     "server:start": "tsx server/index.ts",
     "serve": "npm run build && npm run server:start"

@@ -1,4 +1,5 @@
 name = "post-notion"
-compatibility_date = "2024-01-01"
+# wrangler 3 同梱の workerd が対応する上限日付。これより新しい日付はローカルで切り下げられ本番と挙動がずれるため、wrangler 4 移行時に更新する
+compatibility_date = "2025-07-18"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"

@@ -4,7 +4,7 @@ interface ShortcutsHelpSectionProps {
   version?: string;
 }
 
-export function ShortcutsHelpSection({ version = 'v1.2.0' }: ShortcutsHelpSectionProps) {
+export function ShortcutsHelpSection({ version = `v${__APP_VERSION__}` }: ShortcutsHelpSectionProps) {
   return (
     <section style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
       <div

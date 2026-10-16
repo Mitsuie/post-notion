@@ -24,6 +24,12 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+const DARK_SCHEME_QUERY = '(prefers-color-scheme: dark)';
+
+function getSystemTheme(): 'light' | 'dark' {
+  return window.matchMedia(DARK_SCHEME_QUERY).matches ? 'dark' : 'light';
+}
+
 export default function App() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -37,9 +43,9 @@ export default function App() {
   } = useSystemStatus();
   const { preferences, setDefaultPinned, setDefaultDailyReport, setRequireTag } = useUserPreferences();
 
-  // テーマ管理（白ベース / ライトモードをデフォルト）
+  // テーマ管理（保存値がなければ OS のカラースキームに従う。index.html のインラインスクリプトと同じ判定）
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (getItem(STORAGE_KEYS.theme) as 'light' | 'dark') || 'light';
+    return (getItem(STORAGE_KEYS.theme) as 'light' | 'dark') || getSystemTheme();
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -52,10 +58,10 @@ export default function App() {
   // タグDBがアクセス可能（シークレット設定済み かつ 接続疎通OK）か判定
   const isTagsAccessible = isTagsConfigured && (isSystemTagsAccessible ?? (tags.length > 0 || !tagsData));
 
-  // テーマ変更を HTML data-theme 属性、localStorage、favicon、theme-color meta に同期
+  // テーマ変更を HTML data-theme 属性、favicon、theme-color meta に同期
+  // （保存はユーザーが切り替えたときのみ。未保存の間は OS 設定の変更に追従させる）
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    setItem(STORAGE_KEYS.theme, theme);
 
     const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null;
     if (favicon) {
@@ -80,8 +86,22 @@ export default function App() {
     };
   }, []);
 
+  // 保存値がない間は OS のカラースキーム変更に追従
+  useEffect(() => {
+    const media = window.matchMedia(DARK_SCHEME_QUERY);
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (getItem(STORAGE_KEYS.theme) === null) setTheme(e.matches ? 'dark' : 'light');
+    };
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
+
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      setItem(STORAGE_KEYS.theme, next);
+      return next;
+    });
   }, []);
 
   // 投稿送信ハンドラ

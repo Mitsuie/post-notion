@@ -42,7 +42,8 @@ const serverApp = new Hono<{ Bindings: Bindings }>();
 serverApp.use('*', secureHeaders(SECURE_HEADERS_OPTIONS));
 
 // 1. 環境変数の注入（最新の .dev.vars / .env を c.env に透過的に注入）
-serverApp.use('*', async (c, next) => {
+// 静的ファイル配信ではファイルを読む必要がないため、API リクエストに限定する
+serverApp.use('/api/*', async (c, next) => {
   const current = (c.env || {}) as Partial<Bindings>;
   const latest = getLatestEnv();
 

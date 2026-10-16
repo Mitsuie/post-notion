@@ -15,6 +15,7 @@ import { TimelineFilterModal } from './TimelineFilterModal';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { useTimelineFilter, DEFAULT_FILTER, CLEARED_FILTER } from '../hooks/useTimelineFilter';
 import { usePostsQuery } from '../hooks/usePosts';
+import { getItem, setItem, STORAGE_KEYS } from '../utils/storage';
 
 export type { DatePreset, FilterState } from '../hooks/useTimelineFilter';
 
@@ -39,18 +40,18 @@ export function Timeline({
 }: TimelineProps) {
   // ソート設定（localStorageに保存して記憶）
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>(() => {
-    return (localStorage.getItem('post-notion-sort-order') as 'desc' | 'asc') || 'desc';
+    return (getItem(STORAGE_KEYS.sortOrder) as 'desc' | 'asc') || 'desc';
   });
   const [pinPriority, setPinPriority] = useState<boolean>(() => {
-    return localStorage.getItem('post-notion-sort-pin') !== 'false';
+    return getItem(STORAGE_KEYS.sortPin) !== 'false';
   });
 
   useEffect(() => {
-    localStorage.setItem('post-notion-sort-order', sortOrder);
+    setItem(STORAGE_KEYS.sortOrder, sortOrder);
   }, [sortOrder]);
 
   useEffect(() => {
-    localStorage.setItem('post-notion-sort-pin', String(pinPriority));
+    setItem(STORAGE_KEYS.sortPin, String(pinPriority));
   }, [pinPriority]);
 
   // タイムラインフィルター＆ソートのカスタムフック

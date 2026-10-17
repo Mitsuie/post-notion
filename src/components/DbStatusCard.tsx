@@ -10,6 +10,8 @@ interface DbStatusCardProps {
   extraInfo?: React.ReactNode;
   properties?: string[];
   error?: string;
+  // 接続はできているが注意が必要な状態（データソースが複数ある等）
+  warning?: string;
 }
 
 /**
@@ -24,6 +26,7 @@ export function DbStatusCard({
   extraInfo,
   properties,
   error,
+  warning,
 }: DbStatusCardProps) {
   return (
     <div
@@ -85,6 +88,12 @@ export function DbStatusCard({
             </span>
           ))}
         </div>
+      )}
+
+      {warning && connected && (
+        <p style={{ color: 'var(--pinned-color)', fontSize: '0.72rem', marginTop: '4px' }}>
+          {warning}
+        </p>
       )}
 
       {error && configured !== false && (

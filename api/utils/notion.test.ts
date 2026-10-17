@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { findPropertyKey, filterUsedPostsProperties, parseTagsLimit, queryAll } from './notion.ts';
 
-// has_more が false になるまで pages 件のページを返すテスト用の databases.query
+// has_more が false になるまで pages 件のページを返すテスト用の dataSources.query
 function fakeNotion(pages: number) {
   const query = vi.fn(async ({ start_cursor }: { start_cursor?: string }) => {
     const index = start_cursor ? Number(start_cursor) : 0;
@@ -12,22 +12,22 @@ function fakeNotion(pages: number) {
       next_cursor: hasMore ? String(index + 1) : null,
     };
   });
-  return { notion: { databases: { query } } as any, query };
+  return { notion: { dataSources: { query } } as any, query };
 }
 
 describe('queryAll', () => {
   it('has_more がなくなるまで start_cursor で取得を続ける', async () => {
     const { notion, query } = fakeNotion(3);
-    const results = await queryAll(notion, { database_id: 'db' });
+    const results = await queryAll(notion, { data_source_id: 'ds' });
     expect(results.map((r: any) => r.id)).toEqual(['p0', 'p1', 'p2']);
     expect(query).toHaveBeenCalledTimes(3);
-    expect(query.mock.calls[0][0]).toMatchObject({ database_id: 'db', page_size: 100, start_cursor: undefined });
+    expect(query.mock.calls[0][0]).toMatchObject({ data_source_id: 'ds', page_size: 100, start_cursor: undefined });
     expect(query.mock.calls[1][0]).toMatchObject({ start_cursor: '1' });
   });
 
   it('maxPages で打ち切る', async () => {
     const { notion, query } = fakeNotion(50);
-    const results = await queryAll(notion, { database_id: 'db' }, 10);
+    const results = await queryAll(notion, { data_source_id: 'ds' }, 10);
     expect(results).toHaveLength(10);
     expect(query).toHaveBeenCalledTimes(10);
   });

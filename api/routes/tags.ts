@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Bindings, TagItem } from '../types.ts';
 import { getNotionClient, validateEnv } from '../notion.ts';
 import { parseTagsLimit, queryAll } from '../utils/notion.ts';
+import { getDataSourceId } from '../utils/schema.ts';
 import { toClientError } from '../utils/errors.ts';
 
 export const tagsRouter = new Hono<{ Bindings: Bindings }>();
@@ -24,7 +25,9 @@ tagsRouter.get('/', async (c) => {
 
   try {
     // 100 件を超えるタグも取得できるよう、全ページを取得する
-    const results = await queryAll(notion, { database_id: env.NOTION_TAGS_DATABASE_ID });
+    const results = await queryAll(notion, {
+      data_source_id: await getDataSourceId(notion, env.NOTION_TAGS_DATABASE_ID),
+    });
 
     const tags: TagItem[] = results
       .map((page: any) => {

@@ -1,7 +1,7 @@
 import React, { RefObject } from 'react';
 
 interface UseMarkdownShortcutsOptions {
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
   onChange: (value: string) => void;
   onSend: () => void;
 }

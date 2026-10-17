@@ -1,25 +1,22 @@
 /**
  * Notion API関連の共通ユーティリティ
  */
-import type { Client } from '@notionhq/client';
-import type {
-  QueryDatabaseParameters,
-  QueryDatabaseResponse,
-} from '@notionhq/client/build/src/api-endpoints';
+import type { Client, QueryDataSourceParameters, QueryDataSourceResponse } from '@notionhq/client';
 
 /**
- * databases.query を has_more がなくなるまで繰り返し、全件を取得するヘルパー
+ * dataSources.query を has_more がなくなるまで繰り返し、全件を取得するヘルパー
+ * - data_source_id は schema.ts の getDataSourceId でデータベース ID から解決して渡す
  * - 1 ページ 100 件 × 最大 maxPages ページ（既定 10 ページ = 1,000 件）で打ち切る安全弁付き
  */
 export async function queryAll(
-  notion: Pick<Client, 'databases'>,
-  args: Omit<QueryDatabaseParameters, 'start_cursor' | 'page_size'>,
+  notion: Pick<Client, 'dataSources'>,
+  args: Omit<QueryDataSourceParameters, 'start_cursor' | 'page_size'>,
   maxPages: number = 10
-): Promise<QueryDatabaseResponse['results']> {
-  const results: QueryDatabaseResponse['results'] = [];
+): Promise<QueryDataSourceResponse['results']> {
+  const results: QueryDataSourceResponse['results'] = [];
   let cursor: string | undefined = undefined;
   for (let i = 0; i < maxPages; i++) {
-    const response: QueryDatabaseResponse = await notion.databases.query({
+    const response: QueryDataSourceResponse = await notion.dataSources.query({
       ...args,
       start_cursor: cursor,
       page_size: 100,

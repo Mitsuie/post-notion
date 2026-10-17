@@ -12,6 +12,7 @@ import { getNotionClient, validateEnv } from '../notion.ts';
 import { mapPageToPost } from '../utils/postMapper.ts';
 import { parsePostsQueryParams, buildPostsQuery } from '../utils/postsQuery.ts';
 import {
+  getDataSourceId,
   getPostsSchema,
   invalidateSchemaCache,
   isValidationError,
@@ -67,8 +68,8 @@ postsRouter.get('/', async (c) => {
       return c.json({ posts: [], nextCursor: null, hasMore: false });
     }
 
-    const response = await notion.databases.query({
-      database_id: env.NOTION_POSTS_DATABASE_ID,
+    const response = await notion.dataSources.query({
+      data_source_id: await getDataSourceId(notion, env.NOTION_POSTS_DATABASE_ID),
       ...query,
       page_size: 50,
     });
@@ -186,7 +187,7 @@ postsRouter.post('/', async (c) => {
 
     // ページ作成時は先頭の100件のみ渡す
     const createdPage = await notion.pages.create({
-      parent: { database_id: env.NOTION_POSTS_DATABASE_ID },
+      parent: { data_source_id: await getDataSourceId(notion, env.NOTION_POSTS_DATABASE_ID) },
       properties,
       children: blockChunks[0],
     });

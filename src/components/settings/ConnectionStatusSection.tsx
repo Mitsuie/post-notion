@@ -88,6 +88,7 @@ export function ConnectionStatusSection({
             idMasked={statusData.postsDb?.idMasked}
             properties={statusData.postsDb?.properties}
             error={statusData.postsDb?.error}
+            warning={statusData.postsDb?.warning}
           />
 
           {/* Tags データベース (シークレット設定時のみ表示) */}
@@ -106,6 +107,7 @@ export function ConnectionStatusSection({
                 ) : undefined
               }
               error={statusData.tagsDb?.error}
+              warning={statusData.tagsDb?.warning}
             />
           )}
 
@@ -125,6 +127,7 @@ export function ConnectionStatusSection({
                 ) : undefined
               }
               error={statusData.dailyReportDb?.error}
+              warning={statusData.dailyReportDb?.warning}
             />
           )}
 

@@ -28,6 +28,20 @@ function loadDevVars(): Record<string, string> {
   return vars;
 }
 
+// データベース ID からタイトル・先頭のデータソース・プロパティ定義を取得する（Notion API 2025-09-03 以降）
+async function inspectDatabase(notion: Client, databaseId: string) {
+  const db: any = await notion.databases.retrieve({ database_id: databaseId });
+  const sources: Array<{ id: string; name?: string }> = db.data_sources ?? [];
+  if (sources.length === 0) throw new Error('データソースが見つかりません');
+  if (sources.length > 1) console.log(`⚠️ データソースが ${sources.length} 件あります。先頭（${sources[0].name ?? sources[0].id}）を使用します。`);
+  const dataSource: any = await notion.dataSources.retrieve({ data_source_id: sources[0].id });
+  return {
+    title: db.title?.[0]?.plain_text || '名称未設定',
+    dataSourceId: sources[0].id,
+    properties: (dataSource.properties ?? {}) as Record<string, any>,
+  };
+}
+
 async function testNotion() {
   console.log('🔍 .dev.vars を読み込んでいます...');
   const env = loadDevVars();
@@ -53,11 +67,11 @@ async function testNotion() {
     console.log('⚠️ NOTION_TAGS_DATABASE_ID が未設定です（タグ機能は無効となります）。');
   } else {
     try {
-      const tagsDb = await notion.databases.retrieve({ database_id: tagsDbId });
-      console.log('✅ タグ管理DBの取得成功:', (tagsDb as any).title?.[0]?.plain_text || '名称未設定');
-      
-      const tagsQuery = await notion.databases.query({
-        database_id: tagsDbId,
+      const tagsDb = await inspectDatabase(notion, tagsDbId);
+      console.log('✅ タグ管理DBの取得成功:', tagsDb.title);
+
+      const tagsQuery = await notion.dataSources.query({
+        data_source_id: tagsDb.dataSourceId,
         page_size: 10,
       });
       console.log(`✅ タグ取得成功 (取得件数: ${tagsQuery.results.length}件):`);
@@ -77,15 +91,15 @@ async function testNotion() {
   // 2. Posts データベースのテスト
   console.log('\n--- 2. Posts データベースの接続テスト ---');
   try {
-    const postsDb = await notion.databases.retrieve({ database_id: postsDbId });
-    console.log('✅ Posts DBの取得成功:', (postsDb as any).title?.[0]?.plain_text || '名称未設定');
+    const postsDb = await inspectDatabase(notion, postsDbId);
+    console.log('✅ Posts DBの取得成功:', postsDb.title);
     console.log('📋 検出されたプロパティ一覧:');
-    for (const [key, val] of Object.entries((postsDb as any).properties)) {
+    for (const [key, val] of Object.entries(postsDb.properties)) {
       console.log(`   - ${key} (${(val as any).type})`);
     }
 
-    const postsQuery = await notion.databases.query({
-      database_id: postsDbId,
+    const postsQuery = await notion.dataSources.query({
+      data_source_id: postsDb.dataSourceId,
       page_size: 5,
     });
     console.log(`✅ 投稿一覧の取得成功 (既存投稿: ${postsQuery.results.length}件)`);
@@ -103,10 +117,10 @@ async function testNotion() {
     console.log('⚠️ NOTION_DAILY_REPORT_DATABASE_ID が未設定です（日報連携機能は無効となります）。');
   } else {
     try {
-      const dailyDb = await notion.databases.retrieve({ database_id: dailyDbId });
-      console.log('✅ 日報DBの取得成功:', (dailyDb as any).title?.[0]?.plain_text || '名称未設定');
+      const dailyDb = await inspectDatabase(notion, dailyDbId);
+      console.log('✅ 日報DBの取得成功:', dailyDb.title);
       console.log('📋 検出されたプロパティ一覧:');
-      for (const [key, val] of Object.entries((dailyDb as any).properties)) {
+      for (const [key, val] of Object.entries(dailyDb.properties)) {
         console.log(`   - ${key} (${(val as any).type})`);
       }
 
@@ -119,8 +133,8 @@ async function testNotion() {
       }).format(new Date()).replace(/\//g, '-');
 
       console.log(`🔍 本日の日付 (${todayStr}) の日報ページを検索中...`);
-      const dailyQuery = await notion.databases.query({
-        database_id: dailyDbId,
+      const dailyQuery = await notion.dataSources.query({
+        data_source_id: dailyDb.dataSourceId,
         filter: {
           property: '日付',
           date: {

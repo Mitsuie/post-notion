@@ -2,7 +2,7 @@ import type { PostsSchema } from './schema.ts';
 import { isNotionId } from './validate.ts';
 
 /**
- * GET /api/posts のクエリパラメータを Notion の databases.query 条件へ変換する
+ * GET /api/posts のクエリパラメータを Notion の dataSources.query 条件へ変換する
  */
 
 export type PostsQueryParams = {
@@ -50,7 +50,7 @@ export function parsePostsQueryParams(query: Record<string, string | undefined>)
 }
 
 /**
- * PostsQueryParams とスキーマから databases.query の filter / sorts / start_cursor を組み立てる（純粋関数）
+ * PostsQueryParams とスキーマから dataSources.query の filter / sorts / start_cursor を組み立てる（純粋関数）
  * - 条件は and で結合する。タグは OR 条件
  * - タグ条件があるのにタグプロパティが存在しない場合は null（該当なし）を返す
  * - キーワードはタイトルの contains（Notion は大文字小文字を区別しない）

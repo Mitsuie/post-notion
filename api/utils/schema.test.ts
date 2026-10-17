@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Client } from '@notionhq/client';
 import {
   resolvePostsSchema,
+  pickDataSource,
+  getDataSourceId,
   getPostsSchema,
   getDailyReportDateKey,
   invalidateSchemaCache,
@@ -17,10 +19,18 @@ const POSTS_PROPERTIES = {
   コメント追加回数: { type: 'number' },
 };
 
-// databases.retrieve の呼び出し回数を数えるテスト用の Notion クライアント
+// データベース → データソース（ds-<データベースID>）→ プロパティ定義を返すテスト用の Notion クライアント
+// retrieve は dataSources.retrieve（プロパティ定義の取得）の呼び出し回数を数える
 function fakeNotion(properties: Record<string, any>) {
+  const retrieveDatabase = vi.fn(async ({ database_id }: { database_id: string }) => ({
+    data_sources: [{ id: `ds-${database_id}`, name: 'main' }],
+  }));
   const retrieve = vi.fn(async () => ({ properties }));
-  return { client: { databases: { retrieve } } as unknown as Client, retrieve };
+  return {
+    client: { databases: { retrieve: retrieveDatabase }, dataSources: { retrieve } } as unknown as Client,
+    retrieve,
+    retrieveDatabase,
+  };
 }
 
 describe('resolvePostsSchema', () => {
@@ -58,7 +68,7 @@ describe('getPostsSchema', () => {
     vi.useRealTimers();
   });
 
-  it('2回目以降はキャッシュを返し databases.retrieve を呼ばない', async () => {
+  it('2回目以降はキャッシュを返し dataSources.retrieve を呼ばない', async () => {
     const { client, retrieve } = fakeNotion(POSTS_PROPERTIES);
     const first = await getPostsSchema(client, 'db1');
     const second = await getPostsSchema(client, 'db1');
@@ -93,13 +103,42 @@ describe('getPostsSchema', () => {
   });
 
   it('取得に失敗した結果はキャッシュしない', async () => {
-    const retrieve = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('network'))
-      .mockResolvedValueOnce({ properties: POSTS_PROPERTIES });
-    const client = { databases: { retrieve } } as unknown as Client;
+    const { client, retrieve } = fakeNotion(POSTS_PROPERTIES);
+    retrieve.mockRejectedValueOnce(new Error('network'));
     await expect(getPostsSchema(client, 'db1')).rejects.toThrow('network');
     await expect(getPostsSchema(client, 'db1')).resolves.toMatchObject({ titleKey: 'Name' });
+  });
+});
+
+describe('データソースの解決', () => {
+  beforeEach(() => invalidateSchemaCache());
+
+  it('pickDataSource は先頭のデータソースと件数を返す', () => {
+    expect(pickDataSource({ data_sources: [{ id: 'a' }] }, 'db')).toEqual({ dataSourceId: 'a', dataSourceCount: 1 });
+    expect(pickDataSource({ data_sources: [{ id: 'a' }, { id: 'b' }] }, 'db')).toEqual({ dataSourceId: 'a', dataSourceCount: 2 });
+  });
+
+  it('データソースがない応答はエラーにする', () => {
+    expect(() => pickDataSource({ data_sources: [] }, 'db')).toThrow('no data sources');
+    expect(() => pickDataSource({}, 'db')).toThrow('no data sources');
+    expect(() => pickDataSource(null, 'db')).toThrow('no data sources');
+  });
+
+  it('データソース ID をキャッシュし、スキーマ取得とも databases.retrieve を共有する', async () => {
+    const { client, retrieve, retrieveDatabase } = fakeNotion(POSTS_PROPERTIES);
+    expect(await getDataSourceId(client, 'db1')).toBe('ds-db1');
+    await getPostsSchema(client, 'db1');
+    expect(await getDataSourceId(client, 'db1')).toBe('ds-db1');
+    expect(retrieveDatabase).toHaveBeenCalledTimes(1);
+    expect(retrieve).toHaveBeenCalledWith({ data_source_id: 'ds-db1' });
+  });
+
+  it('invalidateSchemaCache でデータソース ID も取得し直す', async () => {
+    const { client, retrieveDatabase } = fakeNotion(POSTS_PROPERTIES);
+    await getDataSourceId(client, 'db1');
+    invalidateSchemaCache('db1');
+    await getDataSourceId(client, 'db1');
+    expect(retrieveDatabase).toHaveBeenCalledTimes(2);
   });
 });
 

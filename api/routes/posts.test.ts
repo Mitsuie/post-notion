@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Client } from '@notionhq/client';
 import { app } from '../app.ts';
+import { invalidateSchemaCache } from '../utils/schema.ts';
 
 const ORIGIN = 'http://localhost';
 const POSTS_DB = '0123456789abcdef0123456789abcdef';
 const OTHER_DB = 'ffffffffffffffffffffffffffffffff';
 const PAGE_ID = '11111111-2222-3333-4444-555555555555';
+const POSTS_DS = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const ENV = { NOTION_API_KEY: 'k', NOTION_POSTS_DATABASE_ID: POSTS_DB, NOTION_TAGS_DATABASE_ID: '', NOTION_DAILY_REPORT_DATABASE_ID: '' };
 
 function call(method: string, path: string, body?: string) {
@@ -97,7 +99,8 @@ describe('エラーメッセージの定型化', () => {
 
   it('タグ1件制限の超過は 400 と案内メッセージ', async () => {
     notion.mockImplementation(async ({ path, method }: any) => {
-      if (method === 'get') return { properties: { Name: { type: 'title' }, タグ: { type: 'relation' } } };
+      if (method === 'get' && path === `databases/${POSTS_DB}`) return { data_sources: [{ id: POSTS_DS }] };
+      if (method === 'get' && path === `data_sources/${POSTS_DS}`) return { properties: { Name: { type: 'title' }, タグ: { type: 'relation' } } };
       if (path === 'pages') throw Object.assign(new Error('Relation property has a limit of 1, but 2 values were provided.'), { code: 'validation_error' });
       throw new Error('unexpected');
     });
@@ -146,7 +149,8 @@ describe('タイトルの変更', () => {
   function mockUpdate() {
     notion.mockImplementation(async ({ path, method }: any) => {
       if (method === 'get' && path === `pages/${PAGE_ID}`) return ownPage;
-      if (method === 'get' && path === `databases/${POSTS_DB}`) return { properties: { Name: { type: 'title' } } };
+      if (method === 'get' && path === `databases/${POSTS_DB}`) return { data_sources: [{ id: POSTS_DS }] };
+      if (method === 'get' && path === `data_sources/${POSTS_DS}`) return { properties: { Name: { type: 'title' } } };
       if (method === 'patch' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID };
       throw new Error(`unexpected ${method} ${path}`);
     });
@@ -167,5 +171,43 @@ describe('タイトルの変更', () => {
     expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ title: ' \n ' }))).status).toBe(400);
     expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ title: 1 }))).status).toBe(400);
     expect(notion).not.toHaveBeenCalled();
+  });
+});
+
+describe('データソース API（Notion API 2025-09-03）', () => {
+  beforeEach(() => invalidateSchemaCache());
+
+  it('投稿一覧は Posts DB のデータソースに問い合わせる', async () => {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `databases/${POSTS_DB}`) return { data_sources: [{ id: POSTS_DS }] };
+      if (method === 'post' && path === `data_sources/${POSTS_DS}/query`) return { results: [], next_cursor: null, has_more: false };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    const res = await app.request(`${ORIGIN}/api/posts`, {}, ENV);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ posts: [], hasMore: false });
+  });
+
+  it('投稿の作成は parent にデータソース ID を指定する', async () => {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `databases/${POSTS_DB}`) return { data_sources: [{ id: POSTS_DS }] };
+      if (method === 'get' && path === `data_sources/${POSTS_DS}`) return { properties: { Name: { type: 'title' } } };
+      if (method === 'post' && path === 'pages') return { id: PAGE_ID, created_time: '2026-10-17T00:00:00.000Z', url: 'x', properties: {} };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    const res = await call('POST', '/api/posts', JSON.stringify({ title: 'a', linkDailyReport: false }));
+    expect(res.status).toBe(200);
+    const create = notion.mock.calls.find(([args]: any) => args.path === 'pages')![0];
+    expect(create.body.parent).toEqual({ data_source_id: POSTS_DS });
+  });
+
+  it('v5 の応答（parent.type が data_source_id）でも Posts DB の所属を確認できる', async () => {
+    const v5Parent = { type: 'data_source_id', data_source_id: POSTS_DS, database_id: '01234567-89ab-cdef-0123-456789abcdef' };
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID, parent: v5Parent, properties: {} };
+      if (method === 'patch' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    expect((await call('PATCH', `/api/posts/${PAGE_ID}`, JSON.stringify({ archived: true }))).status).toBe(200);
   });
 });

@@ -1,5 +1,5 @@
 import type { Client } from '@notionhq/client';
-import { getDailyReportDateKey } from './schema.ts';
+import { getDailyReportDateKey, getDataSourceId } from './schema.ts';
 import { toClientError } from './errors.ts';
 
 export interface ResolveDailyReportResult {
@@ -40,8 +40,8 @@ export async function resolveDailyReportPageId(
     const dateKey = await getDailyReportDateKey(notion, dailyDbId);
 
     // 当日の日報ページをクエリ検索
-    const dailyQuery = await notion.databases.query({
-      database_id: dailyDbId,
+    const dailyQuery = await notion.dataSources.query({
+      data_source_id: await getDataSourceId(notion, dailyDbId),
       filter: {
         property: dateKey,
         date: {

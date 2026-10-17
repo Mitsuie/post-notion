@@ -88,6 +88,7 @@ export interface StatusData {
     idMasked?: string;
     properties?: string[];
     error?: string;
+    warning?: string;
   };
   tagsDb?: {
     connected: boolean;
@@ -96,6 +97,7 @@ export interface StatusData {
     idMasked?: string;
     tagsCount?: number;
     error?: string;
+    warning?: string;
   };
   dailyReportDb?: {
     connected: boolean;
@@ -104,6 +106,7 @@ export interface StatusData {
     idMasked?: string;
     properties?: string[];
     error?: string;
+    warning?: string;
   };
 }
 

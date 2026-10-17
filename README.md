@@ -61,12 +61,12 @@ Cloudflare Pages（エッジ実行・完全無料）およびローカルNode.js
 
 | レイヤー | 技術 | 用途 |
 | :--- | :--- | :--- |
-| **フロントエンド** | React 18, TypeScript, Vite | SPAクライアント |
+| **フロントエンド** | React 19, TypeScript, Vite 8 | SPAクライアント |
 | **状態・キャッシュ** | TanStack Query (React Query) v5 | 楽観的更新、非同期データキャッシュ |
 | **耐障害性・PWA** | Service Worker, CacheStorage | Network-First ナビゲーション、インラインフェイルセーフ |
 | **UI・アイコン** | Vanilla CSS, Lucide React | インダストリアルモノトーンデザイン、アイコン |
 | **BFF / API層** | Hono v4 | Web標準準拠の軽量高速APIフレームワーク |
-| **Notion連携** | `@notionhq/client`, `notion-to-md` | Notion公式SDK、ブロックMarkdown相互変換 |
+| **Notion連携** | `@notionhq/client` v5（Notion API 2025-09-03）, `notion-to-md` | Notion公式SDK（データソースAPI）、ブロックMarkdown相互変換 |
 | **サーバー (Node.js)**| `@hono/node-server`, `dotenv`, `tsx` | スタンドアロン実行・ローカル配信 |
 | **ホスティング (本番)**| Cloudflare Pages + Pages Functions | エッジサーバーレスホスティング (手法A) |
 | **テスト・CI** | Vitest, GitHub Actions | 純粋関数・ルートの単体テスト、型チェック・ビルドの自動実行 |

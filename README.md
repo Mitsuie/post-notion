@@ -114,7 +114,7 @@ post-notion/
 ## 🚀 クローン後のセットアップ手順
 
 ### 1. 前提条件
-- **Node.js**: v22.12.0 以上（Cloudflare Pages のビルドはリポジトリ直下の `.node-version` で Node 22 系に固定）
+- **Node.js**: v22.12.0 以上（Cloudflare Pages のビルドと CI は、リポジトリ直下の `.node-version` でパッチ版まで固定。Node.js のセキュリティリリースが出たら更新する）
 - **npm**: v10.0.0 以上
 - **Notion アカウント**: 内部インテグレーション作成権限
 

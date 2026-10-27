@@ -13,11 +13,16 @@ export const TAG_LIMIT_MESSAGE =
 export const NOTION_UNAVAILABLE_MESSAGE =
   'Notion が一時的に応答していません。少し待って再試行してください';
 
+export const CREATE_TIMEOUT_MESSAGE =
+  'Notion の応答が時間内に返りませんでした。投稿されている可能性があるため、タイムラインで確認してから再送してください';
+
 export const TAG_LIMIT_HINT = 'タグを 1 件にすると投稿できる場合があります';
 
 export type ClientErrorOptions = {
   /** 送信したタグの件数（タグ1件制限の案内に使う） */
   tagCount?: number;
+  /** 作成系のリクエストか（タイムアウト時に作成済みの可能性を案内し、再送による重複を防ぐ） */
+  isCreate?: boolean;
 };
 
 function errorCode(error: unknown): string | undefined {
@@ -47,11 +52,13 @@ export function toClientError(
     case 'rate_limited':
       return { status: 503, message: 'Notion が混み合っています。少し待って再試行してください' };
     // Notion 側の一時障害と SDK のリクエストタイムアウト（RequestTimeoutError）
+    case 'gateway_timeout':
+    case 'notionhq_client_request_timeout':
+      if (options.isCreate) return { status: 503, message: CREATE_TIMEOUT_MESSAGE };
+      return { status: 503, message: NOTION_UNAVAILABLE_MESSAGE };
     case 'internal_server_error':
     case 'service_unavailable':
-    case 'gateway_timeout':
     case 'conflict_error':
-    case 'notionhq_client_request_timeout':
       return { status: 503, message: NOTION_UNAVAILABLE_MESSAGE };
     case 'validation_error':
       // タグのリレーションが1件に制限されている DB へ複数タグを送った場合

@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { RequestTimeoutError } from '@notionhq/client';
-import { toClientError, TAG_LIMIT_MESSAGE, TAG_LIMIT_HINT, NOTION_UNAVAILABLE_MESSAGE } from './errors.ts';
+import {
+  toClientError,
+  TAG_LIMIT_MESSAGE,
+  TAG_LIMIT_HINT,
+  NOTION_UNAVAILABLE_MESSAGE,
+  CREATE_TIMEOUT_MESSAGE,
+} from './errors.ts';
 
 function notionError(code: string, message = 'raw notion message') {
   return Object.assign(new Error(message), { code });
@@ -37,6 +43,18 @@ describe('toClientError', () => {
 
   it('SDK のリクエストタイムアウトは 503 で再試行を促す', () => {
     expect(toClientError(new RequestTimeoutError(), 'fb')).toEqual({ status: 503, message: NOTION_UNAVAILABLE_MESSAGE });
+  });
+
+  it('作成系のタイムアウトは 503 で作成済みの可能性を案内する', () => {
+    for (const error of [new RequestTimeoutError(), notionError('gateway_timeout')]) {
+      expect(toClientError(error, 'fb', { isCreate: true })).toEqual({ status: 503, message: CREATE_TIMEOUT_MESSAGE });
+    }
+  });
+
+  it('作成系でもタイムアウト以外の一時障害は従来の文言', () => {
+    for (const code of ['internal_server_error', 'service_unavailable', 'conflict_error']) {
+      expect(toClientError(notionError(code), 'fb', { isCreate: true })).toEqual({ status: 503, message: NOTION_UNAVAILABLE_MESSAGE });
+    }
   });
 
   it('タグ1件制限の validation_error は 400 と案内メッセージ', () => {

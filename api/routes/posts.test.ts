@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Client } from '@notionhq/client';
+import { Client, RequestTimeoutError } from '@notionhq/client';
 import { app } from '../app.ts';
 import { invalidateSchemaCache } from '../utils/schema.ts';
-import { NOTION_UNAVAILABLE_MESSAGE, TAG_LIMIT_HINT } from '../utils/errors.ts';
+import { NOTION_UNAVAILABLE_MESSAGE, TAG_LIMIT_HINT, CREATE_TIMEOUT_MESSAGE } from '../utils/errors.ts';
 
 const ORIGIN = 'http://localhost';
 const POSTS_DB = '0123456789abcdef0123456789abcdef';
@@ -184,6 +184,29 @@ describe('エラーメッセージの定型化', () => {
     const body = await res.text();
     expect(body).not.toContain('SECRET');
     expect(JSON.parse(body).message).toBe(NOTION_UNAVAILABLE_MESSAGE);
+  });
+
+  it('投稿作成のタイムアウトは 503 で作成済みの可能性を案内する', async () => {
+    for (const error of [new RequestTimeoutError(), Object.assign(new Error('timeout'), { code: 'gateway_timeout' })]) {
+      notion.mockImplementation(async ({ path, method }: any) => {
+        if (method === 'get' && path === `databases/${POSTS_DB}`) return { data_sources: [{ id: POSTS_DS }] };
+        if (method === 'get' && path === `data_sources/${POSTS_DS}`) return { properties: { Name: { type: 'title' }, タグ: { type: 'relation' } } };
+        if (path === 'pages') throw error;
+        throw new Error('unexpected');
+      });
+      const res = await call('POST', '/api/posts', JSON.stringify({ title: 'a', linkDailyReport: false }));
+      expect(res.status).toBe(503);
+      expect(((await res.json()) as { message: string }).message).toBe(CREATE_TIMEOUT_MESSAGE);
+    }
+  });
+
+  it('投稿一覧のタイムアウトは従来の一時障害の文言', async () => {
+    for (const error of [new RequestTimeoutError(), Object.assign(new Error('timeout'), { code: 'gateway_timeout' })]) {
+      notion.mockRejectedValue(error);
+      const res = await app.request(`${ORIGIN}/api/posts`, {}, ENV);
+      expect(res.status).toBe(503);
+      expect(((await res.json()) as { message: string }).message).toBe(NOTION_UNAVAILABLE_MESSAGE);
+    }
   });
 
   it('タグ1件制限の超過は 400 と案内メッセージ', async () => {

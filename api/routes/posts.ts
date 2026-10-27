@@ -216,8 +216,10 @@ postsRouter.post('/', async (c) => {
     // Notion 側でプロパティ名が変更された可能性があるため、次回はスキーマを取得し直す
     if (isValidationError(error)) invalidateSchemaCache(env.NOTION_POSTS_DATABASE_ID);
     // タグ1件制限の超過は 400 と案内メッセージに変換される（判定に送信したタグの件数も使う）
+    // タイムアウト時はページが作成済みの可能性があるため、再送前にタイムラインの確認を促す
     const { status, message } = toClientError(error, '投稿の作成に失敗しました', {
       tagCount: payload.tagIds?.length ?? 0,
+      isCreate: true,
     });
     return c.json({ error: 'Failed to create post', message }, status);
   }

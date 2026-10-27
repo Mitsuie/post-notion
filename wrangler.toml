@@ -1,6 +1,7 @@
 name = "post-notion"
-# wrangler 同梱の workerd が対応する上限日付（wrangler 4.151.1 / workerd 1.20261012.1）。
-# これより新しい日付はローカルで切り下げられ本番と挙動がずれるため、wrangler の更新時に合わせて見直す
+# compatibility_date は、wrangler 同梱の workerd が対応する上限日付以下にする
+# （上限より新しい日付はローカルで切り下げられ、本番と挙動がずれるため）。
+# 2026-10-12 は wrangler 4.151.1（workerd 1.20261012.1）の上限。日付を上げる場合は上限を確認し、Preview で動作を確かめる
 # 確認: node -e "console.log(require('workerd').compatibilityDate)"
 compatibility_date = "2026-10-12"
 compatibility_flags = ["nodejs_compat"]

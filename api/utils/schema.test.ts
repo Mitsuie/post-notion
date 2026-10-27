@@ -77,21 +77,43 @@ describe('resolvePostsSchema', () => {
   });
 });
 
-// resolvePostsSchema で解決された列名（未解決は除く）
+// 作成日時・作成者（Notion が自動で設定する列）。接続状況画面には表示するが、resolvePostsSchema の解決対象ではない
+const AUTO_COLUMNS_PROPERTIES = {
+  作成日時: { type: 'created_time' },
+  作成者: { type: 'created_by' },
+};
+
+// resolvePostsSchema の 5 項目（titleKey・tagsKey・pinnedKey・dailyReportKey・commentsCountKey）で解決された列名
+// - DB に存在しない既定名（titleKey の 'タイトル'）と未解決（undefined）は除く
 function resolvedKeys(properties: Record<string, any>): string[] {
-  return [...new Set(Object.values(resolvePostsSchema(properties)).filter((k): k is string => !!k))].sort();
+  return [...new Set(Object.values(resolvePostsSchema(properties)))]
+    .filter((k): k is string => !!k && k in properties)
+    .sort();
 }
 
-describe('filterUsedPostsProperties と resolvePostsSchema の一致', () => {
-  it('候補名に一致しない列を含む DB で、接続状況の表示と実際の解決結果が一致する', () => {
+// filterUsedPostsProperties の結果のうち、resolvePostsSchema の 5 項目の対象となる列（作成日時・作成者を除く）
+function displayedSchemaKeys(properties: Record<string, any>): string[] {
+  return filterUsedPostsProperties(properties)
+    .filter((k) => !['created_time', 'created_by'].includes(properties[k].type))
+    .sort();
+}
+
+describe('filterUsedPostsProperties と resolvePostsSchema の 5 項目の一致', () => {
+  it('候補名に一致しない列を含む DB で、接続状況の表示と resolvePostsSchema の 5 項目の解決結果が一致する', () => {
     expect(filterUsedPostsProperties(UNRELATED_COLUMNS_PROPERTIES)).toEqual(['Name', 'DB_日報']);
-    expect([...filterUsedPostsProperties(UNRELATED_COLUMNS_PROPERTIES)].sort()).toEqual(
-      resolvedKeys(UNRELATED_COLUMNS_PROPERTIES)
-    );
+    expect(displayedSchemaKeys(UNRELATED_COLUMNS_PROPERTIES)).toEqual(resolvedKeys(UNRELATED_COLUMNS_PROPERTIES));
   });
 
-  it('候補名どおりの列名の DB でも一致する', () => {
-    expect([...filterUsedPostsProperties(POSTS_PROPERTIES)].sort()).toEqual(resolvedKeys(POSTS_PROPERTIES));
+  it('候補名どおりの列名の DB でも、resolvePostsSchema の 5 項目の解決結果と一致する', () => {
+    expect(displayedSchemaKeys(POSTS_PROPERTIES)).toEqual(resolvedKeys(POSTS_PROPERTIES));
+  });
+
+  it('作成日時・作成者を含む DB では、それらを除いた部分が resolvePostsSchema の 5 項目の解決結果と一致する', () => {
+    for (const base of [UNRELATED_COLUMNS_PROPERTIES, POSTS_PROPERTIES]) {
+      const properties = { ...base, ...AUTO_COLUMNS_PROPERTIES };
+      expect(filterUsedPostsProperties(properties)).toEqual(expect.arrayContaining(['作成日時', '作成者']));
+      expect(displayedSchemaKeys(properties)).toEqual(resolvedKeys(properties));
+    }
   });
 });
 

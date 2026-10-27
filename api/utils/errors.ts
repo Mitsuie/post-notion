@@ -10,6 +10,16 @@ export type ClientError = { status: ClientErrorStatus; message: string };
 export const TAG_LIMIT_MESSAGE =
   'タグのリレーション設定が1件に制限されているため、複数タグを登録できません。タグを1件のみ選択して再送信してください。';
 
+export const NOTION_UNAVAILABLE_MESSAGE =
+  'Notion が一時的に応答していません。少し待って再試行してください';
+
+export const TAG_LIMIT_HINT = 'タグを 1 件にすると投稿できる場合があります';
+
+export type ClientErrorOptions = {
+  /** 送信したタグの件数（タグ1件制限の案内に使う） */
+  tagCount?: number;
+};
+
 function errorCode(error: unknown): string | undefined {
   const code = (error as { code?: unknown } | null)?.code;
   return typeof code === 'string' ? code : undefined;
@@ -19,7 +29,11 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error ?? '');
 }
 
-export function toClientError(error: unknown, fallback: string): ClientError {
+export function toClientError(
+  error: unknown,
+  fallback: string,
+  options: ClientErrorOptions = {}
+): ClientError {
   const code = errorCode(error);
   switch (code) {
     case 'object_not_found':
@@ -32,10 +46,21 @@ export function toClientError(error: unknown, fallback: string): ClientError {
       };
     case 'rate_limited':
       return { status: 503, message: 'Notion が混み合っています。少し待って再試行してください' };
+    // Notion 側の一時障害と SDK のリクエストタイムアウト（RequestTimeoutError）
+    case 'internal_server_error':
+    case 'service_unavailable':
+    case 'gateway_timeout':
+    case 'conflict_error':
+    case 'notionhq_client_request_timeout':
+      return { status: 503, message: NOTION_UNAVAILABLE_MESSAGE };
     case 'validation_error':
       // タグのリレーションが1件に制限されている DB へ複数タグを送った場合
       if (errorMessage(error).includes('limit')) {
         return { status: 400, message: TAG_LIMIT_MESSAGE };
+      }
+      // Notion 側の文言が変わっても、複数タグを送っていれば1件制限の可能性を案内する
+      if ((options.tagCount ?? 0) >= 2) {
+        return { status: 500, message: `${fallback}。${TAG_LIMIT_HINT}` };
       }
       return { status: 500, message: fallback };
     default:

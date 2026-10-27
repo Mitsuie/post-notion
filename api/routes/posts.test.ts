@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Client } from '@notionhq/client';
 import { app } from '../app.ts';
 import { invalidateSchemaCache } from '../utils/schema.ts';
+import { NOTION_UNAVAILABLE_MESSAGE, TAG_LIMIT_HINT } from '../utils/errors.ts';
 
 const ORIGIN = 'http://localhost';
 const POSTS_DB = '0123456789abcdef0123456789abcdef';
@@ -168,12 +169,21 @@ describe('本文・コメント一覧の取得（Posts DB への所属確認・�
 
 describe('エラーメッセージの定型化', () => {
   it('Notion の生のエラーメッセージをクライアントに返さない', async () => {
-    notion.mockRejectedValue(Object.assign(new Error('SECRET internal detail'), { code: 'internal_server_error' }));
+    notion.mockRejectedValue(Object.assign(new Error('SECRET internal detail'), { code: 'invalid_request' }));
     const res = await app.request(`${ORIGIN}/api/posts`, {}, ENV);
     expect(res.status).toBe(500);
     const body = await res.text();
     expect(body).not.toContain('SECRET');
     expect(JSON.parse(body).message).toBe('投稿一覧の取得に失敗しました');
+  });
+
+  it('Notion の一時障害は 503 で再試行を促し、生のメッセージを返さない', async () => {
+    notion.mockRejectedValue(Object.assign(new Error('SECRET internal detail'), { code: 'internal_server_error' }));
+    const res = await app.request(`${ORIGIN}/api/posts`, {}, ENV);
+    expect(res.status).toBe(503);
+    const body = await res.text();
+    expect(body).not.toContain('SECRET');
+    expect(JSON.parse(body).message).toBe(NOTION_UNAVAILABLE_MESSAGE);
   });
 
   it('タグ1件制限の超過は 400 と案内メッセージ', async () => {
@@ -187,6 +197,19 @@ describe('エラーメッセージの定型化', () => {
     const res = await call('POST', '/api/posts', JSON.stringify({ title: 'a', tagIds: tags, linkDailyReport: false }));
     expect(res.status).toBe(400);
     expect(((await res.json()) as { message: string }).message).toContain('1件に制限');
+  });
+
+  it('limit を含まない validation_error でもタグを2件以上送っていればタグ1件の補足を付ける', async () => {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `databases/${POSTS_DB}`) return { data_sources: [{ id: POSTS_DS }] };
+      if (method === 'get' && path === `data_sources/${POSTS_DS}`) return { properties: { Name: { type: 'title' }, タグ: { type: 'relation' } } };
+      if (path === 'pages') throw Object.assign(new Error('Relation property accepts only one value.'), { code: 'validation_error' });
+      throw new Error('unexpected');
+    });
+    const tags = ['0123456789abcdef0123456789abcd01', '0123456789abcdef0123456789abcd02'];
+    const res = await call('POST', '/api/posts', JSON.stringify({ title: 'a', tagIds: tags, linkDailyReport: false }));
+    expect(res.status).toBe(500);
+    expect(((await res.json()) as { message: string }).message).toBe(`投稿の作成に失敗しました。${TAG_LIMIT_HINT}`);
   });
 });
 

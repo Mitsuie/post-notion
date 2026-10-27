@@ -50,11 +50,12 @@ export default function App() {
   const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   const tags = tagsData?.tags || [];
-  // タグDB / 日報DB が明示的に設定されている場合のみ有効判定（安全サイド）
-  const isTagsConfigured = appConfig?.tagsConfigured === true;
-  const isDailyReportConfigured = appConfig?.dailyReportConfigured === true;
   // タグDBが利用可能（設定済み かつ /api/tags の取得に成功）か判定
-  const isTagsAccessible = isTagsConfigured && tagsData?.configured === true;
+  // （/api/tags の configured は /api/config と同じ環境変数で判定されるため、/api/config の応答を待たない）
+  const isTagsAccessible = tagsData?.configured === true;
+  // タグDB / 日報DB が明示的に設定されている場合のみ有効判定（安全サイド）
+  const isTagsConfigured = appConfig?.tagsConfigured === true || isTagsAccessible;
+  const isDailyReportConfigured = appConfig?.dailyReportConfigured === true;
   // 日報DBは設定済みなら利用可能とする（接続できない場合は投稿時の警告で伝わる）
   const isDailyReportAccessible = isDailyReportConfigured;
 

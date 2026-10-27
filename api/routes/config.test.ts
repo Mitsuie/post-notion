@@ -48,4 +48,17 @@ describe('GET /api/config', () => {
 
     expect(notion).not.toHaveBeenCalled();
   });
+
+  it('API キー・Posts DB が未設定なら、タグ DB・日報 DB が設定済みでも false を返す', async () => {
+    const dbs = { NOTION_TAGS_DATABASE_ID: 'tags-db', NOTION_DAILY_REPORT_DATABASE_ID: 'daily-db' };
+    for (const env of [
+      { ...BASE_ENV, ...dbs, NOTION_API_KEY: '' },
+      { ...BASE_ENV, ...dbs, NOTION_POSTS_DATABASE_ID: ' ' },
+    ]) {
+      const res = await getConfig(env);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ tagsConfigured: false, dailyReportConfigured: false });
+    }
+    expect(notion).not.toHaveBeenCalled();
+  });
 });

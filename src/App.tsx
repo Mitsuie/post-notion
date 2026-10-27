@@ -198,7 +198,8 @@ export default function App() {
     clearCacheAndReload();
   }, []);
 
-  const hasDraft = checkHasDraft();
+  // localStorage の読み込みを避けるため、セッション失効モーダルを表示するときだけ評価する
+  const hasDraft = isSessionExpired && checkHasDraft();
 
   return (
     <div

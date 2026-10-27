@@ -263,6 +263,7 @@ export default function App() {
         onSetRequireTag={setRequireTag}
         isDailyReportConfigured={isDailyReportConfigured}
         isTagsConfigured={isTagsConfigured}
+        isDailyReportAccessible={isDailyReportConfigured}
       />
 
       {/* メインコンテンツ */}

@@ -1,5 +1,5 @@
 import type { Client } from '@notionhq/client';
-import { findPropertyKey, POSTS_DB_USED_PROPERTY_DEFINITIONS } from './notion.ts';
+import { findPostsPropertyKey, findPropertyKey } from './notion.ts';
 
 /**
  * Notion データベースのプロパティ名解決と、その期限付きキャッシュ
@@ -27,20 +27,17 @@ const dataSourceCache = new Map<string, CacheEntry<DataSourceInfo>>();
 const postsSchemaCache = new Map<string, CacheEntry<PostsSchema>>();
 const dailyReportDateKeyCache = new Map<string, CacheEntry<string>>();
 
-function candidatesOf(name: (typeof POSTS_DB_USED_PROPERTY_DEFINITIONS)[number]['name']): readonly string[] {
-  return POSTS_DB_USED_PROPERTY_DEFINITIONS.find((def) => def.name === name)!.candidates;
-}
-
 /**
  * Posts DB（またはそのページ）のプロパティ定義から、本アプリで使うプロパティ名を解決する（純粋関数）
+ * - 型フォールバックは POSTS_DB_USED_PROPERTY_DEFINITIONS の allowTypeFallback に従う（タイトルのみ）
  */
 export function resolvePostsSchema(properties: Record<string, any>): PostsSchema {
   return {
-    titleKey: findPropertyKey(properties, candidatesOf('タイトル'), 'title') || 'タイトル',
-    tagsKey: findPropertyKey(properties, candidatesOf('タグ'), 'relation'),
-    pinnedKey: findPropertyKey(properties, candidatesOf('ピン留め'), 'checkbox'),
-    dailyReportKey: findPropertyKey(properties, candidatesOf('日報リレーション'), 'relation'),
-    commentsCountKey: findPropertyKey(properties, candidatesOf('コメント追加回数'), 'number'),
+    titleKey: findPostsPropertyKey(properties, 'タイトル') || 'タイトル',
+    tagsKey: findPostsPropertyKey(properties, 'タグ'),
+    pinnedKey: findPostsPropertyKey(properties, 'ピン留め'),
+    dailyReportKey: findPostsPropertyKey(properties, '日報リレーション'),
+    commentsCountKey: findPostsPropertyKey(properties, 'コメント追加回数'),
   };
 }
 
@@ -103,7 +100,8 @@ export async function getPostsSchema(notion: Client, databaseId: string): Promis
 export async function getDailyReportDateKey(notion: Client, databaseId: string): Promise<string> {
   return getCached(dailyReportDateKeyCache, databaseId, async () => {
     const properties = await retrieveDataSourceProperties(notion, databaseId);
-    return findPropertyKey(properties, ['日付', 'Date', '作成日'], 'date') || '日付';
+    // 日報 DB は日付列が 1 つの構成が大半のため、型フォールバックを許可する
+    return findPropertyKey(properties, ['日付', 'Date', '作成日'], 'date', { allowTypeFallback: true }) || '日付';
   });
 }
 

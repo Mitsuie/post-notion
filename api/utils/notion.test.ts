@@ -70,6 +70,14 @@ describe('findPropertyKey', () => {
 
   it('候補名に一致しない場合は同じ型の最初のキーにフォールバックする', () => {
     expect(findPropertyKey(properties, ['Title'], 'title')).toBe('名前');
+    expect(findPropertyKey(properties, ['Title'], 'title', { allowTypeFallback: true })).toBe('名前');
+  });
+
+  it('allowTypeFallback: false なら候補名に一致しない場合は undefined を返す', () => {
+    expect(findPropertyKey(properties, ['Title'], 'title', { allowTypeFallback: false })).toBeUndefined();
+    expect(findPropertyKey(properties, ['Pinned'], 'checkbox', { allowTypeFallback: false })).toBeUndefined();
+    // 候補名に一致すれば従来どおり返す
+    expect(findPropertyKey(properties, ['Tags'], 'relation', { allowTypeFallback: false })).toBe('tags');
   });
 
   it('同じ型のプロパティがなければ undefined を返す', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Client } from '@notionhq/client';
+import { filterUsedPostsProperties } from './notion.ts';
 import {
   resolvePostsSchema,
   pickDataSource,
@@ -17,6 +18,14 @@ const POSTS_PROPERTIES = {
   DB_日報: { type: 'relation' },
   ピン止め: { type: 'checkbox' },
   コメント追加回数: { type: 'number' },
+};
+
+// 改善提案一覧 v1.4.0 BUG-01 の構成（タイトル・日報以外の列名が候補名に一致しない）
+const UNRELATED_COLUMNS_PROPERTIES = {
+  Name: { type: 'title' },
+  DB_日報: { type: 'relation' },
+  完了: { type: 'checkbox' },
+  重要度: { type: 'number' },
 };
 
 // データベース → データソース（ds-<データベースID>）→ プロパティ定義を返すテスト用の Notion クライアント
@@ -55,6 +64,34 @@ describe('resolvePostsSchema', () => {
     expect(schema.pinnedKey).toBeUndefined();
     expect(schema.dailyReportKey).toBeUndefined();
     expect(schema.commentsCountKey).toBeUndefined();
+  });
+
+  it('タイトル以外は候補名に一致しない列を同じ型でも拾わない', () => {
+    expect(resolvePostsSchema(UNRELATED_COLUMNS_PROPERTIES)).toEqual({
+      titleKey: 'Name',
+      tagsKey: undefined,
+      pinnedKey: undefined,
+      dailyReportKey: 'DB_日報',
+      commentsCountKey: undefined,
+    });
+  });
+});
+
+// resolvePostsSchema で解決された列名（未解決は除く）
+function resolvedKeys(properties: Record<string, any>): string[] {
+  return [...new Set(Object.values(resolvePostsSchema(properties)).filter((k): k is string => !!k))].sort();
+}
+
+describe('filterUsedPostsProperties と resolvePostsSchema の一致', () => {
+  it('候補名に一致しない列を含む DB で、接続状況の表示と実際の解決結果が一致する', () => {
+    expect(filterUsedPostsProperties(UNRELATED_COLUMNS_PROPERTIES)).toEqual(['Name', 'DB_日報']);
+    expect([...filterUsedPostsProperties(UNRELATED_COLUMNS_PROPERTIES)].sort()).toEqual(
+      resolvedKeys(UNRELATED_COLUMNS_PROPERTIES)
+    );
+  });
+
+  it('候補名どおりの列名の DB でも一致する', () => {
+    expect([...filterUsedPostsProperties(POSTS_PROPERTIES)].sort()).toEqual(resolvedKeys(POSTS_PROPERTIES));
   });
 });
 
@@ -150,6 +187,11 @@ describe('getDailyReportDateKey', () => {
     expect(await getDailyReportDateKey(client, 'daily')).toBe('Date');
     expect(await getDailyReportDateKey(client, 'daily')).toBe('Date');
     expect(retrieve).toHaveBeenCalledTimes(1);
+  });
+
+  it('候補名に一致しなくても date 型の列にフォールバックする', async () => {
+    const { client } = fakeNotion({ 名前: { type: 'title' }, いつ: { type: 'date' } });
+    expect(await getDailyReportDateKey(client, 'daily')).toBe('いつ');
   });
 
   it('日付プロパティがなければ既定名を返す', async () => {

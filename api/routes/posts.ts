@@ -21,7 +21,7 @@ import { parseMarkdownToNotionBlocks } from '../utils/markdownToNotion.ts';
 import { toRichText } from '../utils/richText.ts';
 import { chunk, CHILDREN_MAX } from '../utils/blocks.ts';
 import { resolveDailyReportPageId } from '../utils/dailyReport.ts';
-import { syncCommentsCount, incrementCommentsCount } from '../utils/comments.ts';
+import { syncCommentsCount, incrementCommentsCount, listAllComments } from '../utils/comments.ts';
 import { isNotionId, readJson, assertPostsPage } from '../utils/validate.ts';
 import { toClientError } from '../utils/errors.ts';
 
@@ -313,7 +313,8 @@ postsRouter.get('/:id/blocks', async (c) => {
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
-    const page: any = await notion.pages.retrieve({ page_id: id });
+    // Posts DB に属するページの本文のみ返す（取得したページの url を使い回す）
+    const page = await assertPostsPage(notion, id, env.NOTION_POSTS_DATABASE_ID);
     const n2m = new NotionToMarkdown({ notionClient: notion });
     const mdblocks = await n2m.pageToMarkdown(id);
     const mdString = n2m.toMarkdownString(mdblocks);
@@ -344,8 +345,11 @@ postsRouter.get('/:id/comments', async (c) => {
   const notion = getNotionClient(env.NOTION_API_KEY);
 
   try {
-    const res = await notion.comments.list({ block_id: id });
-    const comments: CommentItem[] = res.results.map((comment: any) => {
+    // Posts DB に属するページのみ（取得したページはコメント件数の同期で使い回す）
+    const page = await assertPostsPage(notion, id, env.NOTION_POSTS_DATABASE_ID);
+
+    const { results, truncated } = await listAllComments(notion, id);
+    const comments: CommentItem[] = results.map((comment: any) => {
       const text = comment.rich_text?.map((t: any) => t.plain_text).join('') || '';
       return {
         id: comment.id,
@@ -360,10 +364,15 @@ postsRouter.get('/:id/comments', async (c) => {
       };
     });
 
-    const actualCount = res.results.length;
+    // 上限ページ数で打ち切った場合は実数が分からないため、件数を同期せず返さない
+    if (truncated) {
+      return c.json({ comments });
+    }
+
+    const actualCount = results.length;
 
     // ハイブリッド補正: Notionページの「コメント追加回数」プロパティと実数を同期
-    await syncCommentsCount(notion, id, actualCount);
+    await syncCommentsCount(notion, id, actualCount, page);
 
     return c.json({ comments, commentsCount: actualCount });
   } catch (error: unknown) {

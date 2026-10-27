@@ -87,6 +87,85 @@ describe('Posts DB への所属確認', () => {
   });
 });
 
+describe('本文・コメント一覧の取得（Posts DB への所属確認・全件取得）', () => {
+  const ownPage = { id: PAGE_ID, parent: { database_id: POSTS_DB }, url: 'https://www.notion.so/own', properties: { コメント数: { type: 'number', number: 0 } } };
+  const comment = (i: number) => ({ id: `c${i}`, discussion_id: 'd1', rich_text: [{ plain_text: `t${i}` }], created_time: '2026-10-28T00:00:00.000Z' });
+  const calls = (method: string, path: string) => notion.mock.calls.filter(([args]: any) => args.method === method && args.path === path);
+
+  // total 件のコメントを 100 件ずつ返す（Infinity なら has_more を返し続ける）
+  function mockComments(total: number, storedCount = 0) {
+    notion.mockImplementation(async ({ path, method, query }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`)
+        return { ...ownPage, properties: { コメント数: { type: 'number', number: storedCount } } };
+      if (method === 'get' && path === 'comments') {
+        const start = Number(query.start_cursor ?? 0);
+        const end = Math.min(start + 100, total);
+        const results = Array.from({ length: end - start }, (_, i) => comment(start + i));
+        return { results, has_more: end < total, next_cursor: end < total ? String(end) : null };
+      }
+      if (method === 'patch' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+  }
+
+  it('他の DB のページは本文・コメント一覧とも 404 で、更新しない', async () => {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return { ...ownPage, parent: { database_id: OTHER_DB } };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    expect((await app.request(`${ORIGIN}/api/posts/${PAGE_ID}/blocks`, {}, ENV)).status).toBe(404);
+    expect((await app.request(`${ORIGIN}/api/posts/${PAGE_ID}/comments`, {}, ENV)).status).toBe(404);
+    expect(notion.mock.calls.every(([args]: any) => args.method === 'get' && args.path === `pages/${PAGE_ID}`)).toBe(true);
+  });
+
+  it('本文の取得は pages.retrieve を1回だけ呼び、ページの url を返す', async () => {
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return ownPage;
+      if (method === 'get' && path === `blocks/${PAGE_ID}/children`) return { results: [], has_more: false, next_cursor: null };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    const res = await app.request(`${ORIGIN}/api/posts/${PAGE_ID}/blocks`, {}, ENV);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ url: ownPage.url });
+    expect(calls('get', `pages/${PAGE_ID}`)).toHaveLength(1);
+  });
+
+  it('コメント 100 件以下では pages.retrieve と comments.list を1回ずつ呼び、件数が一致すれば更新しない', async () => {
+    mockComments(2, 2);
+    const res = await app.request(`${ORIGIN}/api/posts/${PAGE_ID}/comments`, {}, ENV);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ commentsCount: 2 });
+    expect(calls('get', `pages/${PAGE_ID}`)).toHaveLength(1);
+    expect(calls('get', 'comments')).toHaveLength(1);
+    expect(notion).toHaveBeenCalledTimes(2);
+  });
+
+  it('コメントが 150 件（2 ページ）あれば 150 件を返し、件数を 150 で同期する', async () => {
+    mockComments(150, 100);
+    const res = await app.request(`${ORIGIN}/api/posts/${PAGE_ID}/comments`, {}, ENV);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { comments: unknown[]; commentsCount: number };
+    expect(body.comments).toHaveLength(150);
+    expect(body.commentsCount).toBe(150);
+    expect(calls('get', 'comments').map(([args]: any) => args.query.start_cursor)).toEqual([undefined, '100']);
+    expect(calls('get', `pages/${PAGE_ID}`)).toHaveLength(1);
+    const update = calls('patch', `pages/${PAGE_ID}`);
+    expect(update).toHaveLength(1);
+    expect(update[0][0].body).toEqual({ properties: { コメント数: { number: 150 } } });
+  });
+
+  it('上限（10 ページ）で打ち切った場合は件数を同期せず、commentsCount を返さない', async () => {
+    mockComments(Infinity);
+    const res = await app.request(`${ORIGIN}/api/posts/${PAGE_ID}/comments`, {}, ENV);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { comments: unknown[]; commentsCount?: number };
+    expect(body.comments).toHaveLength(1000);
+    expect(body.commentsCount).toBeUndefined();
+    expect(calls('get', 'comments')).toHaveLength(10);
+    expect(calls('patch', `pages/${PAGE_ID}`)).toHaveLength(0);
+  });
+});
+
 describe('エラーメッセージの定型化', () => {
   it('Notion の生のエラーメッセージをクライアントに返さない', async () => {
     notion.mockRejectedValue(Object.assign(new Error('SECRET internal detail'), { code: 'internal_server_error' }));

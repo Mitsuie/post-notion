@@ -14,7 +14,7 @@ import { SettingsDrawer } from './components/SettingsDrawer';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { useToast } from './components/Toast';
-import { useSystemStatus } from './hooks/useSystemStatus';
+import { useAppConfig } from './hooks/useAppConfig';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import type { CreatePostInput } from './types';
 
@@ -35,12 +35,9 @@ export default function App() {
   const toast = useToast();
   const { createPost, isCreating, togglePin, archivePost, updateTitle } = usePostMutations();
   const { data: tagsData } = useTags();
-  const {
-    isDailyReportConfigured,
-    isTagsConfigured: isSystemTagsConfigured,
-    isDailyReportAccessible,
-    isTagsAccessible: isSystemTagsAccessible,
-  } = useSystemStatus();
+  // 起動時は接続診断（/api/status）を呼ばず、環境変数による設定有無だけを取得する
+  // （接続状況は設定ドロワーを開いたときに SettingsDrawer 内で取得する）
+  const { data: appConfig } = useAppConfig();
   const { preferences, setDefaultPinned, setDefaultDailyReport, setRequireTag } = useUserPreferences();
 
   // テーマ管理（保存値がなければ OS のカラースキームに従う。index.html のインラインスクリプトと同じ判定）
@@ -53,10 +50,14 @@ export default function App() {
   const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   const tags = tagsData?.tags || [];
-  // タグDBが明示的に設定されている場合のみ有効判定（安全サイド）
-  const isTagsConfigured = tagsData ? tagsData.configured === true : Boolean(isSystemTagsConfigured);
-  // タグDBがアクセス可能（シークレット設定済み かつ 接続疎通OK）か判定
-  const isTagsAccessible = isTagsConfigured && (isSystemTagsAccessible ?? (tags.length > 0 || !tagsData));
+  // タグDBが利用可能（設定済み かつ /api/tags の取得に成功）か判定
+  // （/api/tags の configured は /api/config と同じ環境変数で判定されるため、/api/config の応答を待たない）
+  const isTagsAccessible = tagsData?.configured === true;
+  // タグDB / 日報DB が明示的に設定されている場合のみ有効判定（安全サイド）
+  const isTagsConfigured = appConfig?.tagsConfigured === true || isTagsAccessible;
+  const isDailyReportConfigured = appConfig?.dailyReportConfigured === true;
+  // 日報DBは設定済みなら利用可能とする（接続できない場合は投稿時の警告で伝わる）
+  const isDailyReportAccessible = isDailyReportConfigured;
 
   // テーマ変更を HTML data-theme 属性、favicon、theme-color meta に同期
   // （保存はユーザーが切り替えたときのみ。未保存の間は OS 設定の変更に追従させる）
@@ -180,6 +181,7 @@ export default function App() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: ['tags'] }),
+      queryClient.invalidateQueries({ queryKey: ['app-config'] }),
       queryClient.invalidateQueries({ queryKey: ['system-status'] }),
     ]);
     setTimeout(() => setIsRefreshing(false), 500);
@@ -261,8 +263,7 @@ export default function App() {
         onSetRequireTag={setRequireTag}
         isDailyReportConfigured={isDailyReportConfigured}
         isTagsConfigured={isTagsConfigured}
-        isDailyReportAccessible={isDailyReportAccessible}
-        isTagsAccessible={isTagsAccessible}
+        isDailyReportAccessible={isDailyReportConfigured}
       />
 
       {/* メインコンテンツ */}

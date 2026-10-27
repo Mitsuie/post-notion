@@ -38,6 +38,12 @@ export type TagsResponse = {
   limit?: number | null;
 };
 
+// GET /api/config のレスポンス（環境変数のみで判定）
+export type AppConfigResponse = {
+  tagsConfigured: boolean;
+  dailyReportConfigured: boolean;
+};
+
 export type CreatePostPayload = {
   title: string;
   body?: string;

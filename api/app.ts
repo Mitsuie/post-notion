@@ -5,6 +5,7 @@ import type { Bindings } from './types.ts';
 import { tagsRouter } from './routes/tags.ts';
 import { postsRouter } from './routes/posts.ts';
 import { statusRouter } from './routes/status.ts';
+import { configRouter } from './routes/config.ts';
 
 export const app = new Hono<{ Bindings: Bindings }>();
 
@@ -48,5 +49,6 @@ app.get('/api/health', (c) => {
 app.route('/api/tags', tagsRouter);
 app.route('/api/posts', postsRouter);
 app.route('/api/status', statusRouter);
+app.route('/api/config', configRouter);
 
 export default app;

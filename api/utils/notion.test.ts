@@ -65,11 +65,20 @@ describe('findPropertyKey', () => {
   });
 
   it('名前が一致しても型が異なれば候補として扱わない', () => {
-    expect(findPropertyKey(properties, ['固定'], 'relation')).toBe('tags');
+    expect(findPropertyKey(properties, ['固定'], 'relation', { allowTypeFallback: true })).toBe('tags');
   });
 
   it('候補名に一致しない場合は同じ型の最初のキーにフォールバックする', () => {
-    expect(findPropertyKey(properties, ['Title'], 'title')).toBe('名前');
+    expect(findPropertyKey(properties, ['Title'], 'title', { allowTypeFallback: true })).toBe('名前');
+  });
+
+  it('既定（allowTypeFallback 省略）と allowTypeFallback: false では、候補名に一致しない場合は undefined を返す', () => {
+    expect(findPropertyKey(properties, ['Title'], 'title')).toBeUndefined();
+    expect(findPropertyKey(properties, ['固定'], 'relation')).toBeUndefined();
+    expect(findPropertyKey(properties, ['Title'], 'title', { allowTypeFallback: false })).toBeUndefined();
+    expect(findPropertyKey(properties, ['Pinned'], 'checkbox', { allowTypeFallback: false })).toBeUndefined();
+    // 候補名に一致すれば従来どおり返す
+    expect(findPropertyKey(properties, ['Tags'], 'relation', { allowTypeFallback: false })).toBe('tags');
   });
 
   it('同じ型のプロパティがなければ undefined を返す', () => {

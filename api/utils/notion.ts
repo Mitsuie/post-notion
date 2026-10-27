@@ -31,12 +31,14 @@ export async function queryAll(
 /**
  * Notion データベースのプロパティキーを候補名と型から自動検出するヘルパー
  * 1. 候補名との完全一致（大文字小文字無視）を優先探索
- * 2. 見つからない場合は指定された type に一致する最初のプロパティキーをフォールバックとして返却
+ * 2. 見つからない場合、allowTypeFallback: true を指定したときのみ type に一致する最初のプロパティキーを返却
+ *    - 同じ型の列が複数ありうる場合（relation・checkbox・number など）に無関係な列を拾わないよう、既定は false
  */
 export function findPropertyKey(
   properties: Record<string, any>,
   candidateNames: readonly string[],
-  type: string
+  type: string,
+  { allowTypeFallback = false }: { allowTypeFallback?: boolean } = {}
 ): string | undefined {
   // 1. 完全一致（大文字小文字無視）
   for (const name of candidateNames) {
@@ -46,6 +48,7 @@ export function findPropertyKey(
     if (found) return found;
   }
   // 2. タイプ一致の最初のもの
+  if (!allowTypeFallback) return undefined;
   return Object.keys(properties).find((k) => properties[k].type === type);
 }
 
@@ -106,6 +109,25 @@ export const POSTS_DB_USED_PROPERTY_DEFINITIONS = [
   },
 ] as const;
 
+type PostsPropertyDefinition = (typeof POSTS_DB_USED_PROPERTY_DEFINITIONS)[number];
+
+// 定義（候補名・型・型フォールバック可否）に従ってプロパティキーを解決する
+function findDefinedPropertyKey(properties: Record<string, any>, def: PostsPropertyDefinition): string | undefined {
+  return findPropertyKey(properties, def.candidates, def.type, { allowTypeFallback: def.allowTypeFallback });
+}
+
+/**
+ * POSTS_DB_USED_PROPERTY_DEFINITIONS の定義に従ってプロパティキーを解決するヘルパー
+ * - 実際の読み書き（schema.ts の resolvePostsSchema）と接続状況画面の表示（filterUsedPostsProperties）の両方がこれを使う
+ */
+export function findPostsPropertyKey(
+  properties: Record<string, any>,
+  name: PostsPropertyDefinition['name']
+): string | undefined {
+  const def = POSTS_DB_USED_PROPERTY_DEFINITIONS.find((d) => d.name === name);
+  return def && findDefinedPropertyKey(properties, def);
+}
+
 /**
  * DB_Post-Notion の全プロパティから、本アプリで利用しているプロパティ名のみを抽出するヘルパー
  */
@@ -113,24 +135,9 @@ export function filterUsedPostsProperties(properties: Record<string, any>): stri
   const usedKeySet = new Set<string>();
 
   for (const def of POSTS_DB_USED_PROPERTY_DEFINITIONS) {
-    // 1. 候補名との完全一致（大文字小文字無視）かつ型一致
-    const nameMatched = Object.keys(properties).find(
-      (k) =>
-        def.candidates.some((c) => c.toLowerCase() === k.toLowerCase()) &&
-        properties[k].type === def.type
-    );
-
-    if (nameMatched) {
-      usedKeySet.add(nameMatched);
-      continue;
-    }
-
-    // 2. フォールバック（型一致）
-    if (def.allowTypeFallback) {
-      const typeMatched = Object.keys(properties).find((k) => properties[k].type === def.type);
-      if (typeMatched) {
-        usedKeySet.add(typeMatched);
-      }
+    const key = findDefinedPropertyKey(properties, def);
+    if (key) {
+      usedKeySet.add(key);
     }
   }
 

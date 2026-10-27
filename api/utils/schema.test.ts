@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Client } from '@notionhq/client';
+import { filterUsedPostsProperties } from './notion.ts';
 import {
   resolvePostsSchema,
   pickDataSource,
@@ -17,6 +18,14 @@ const POSTS_PROPERTIES = {
   DB_日報: { type: 'relation' },
   ピン止め: { type: 'checkbox' },
   コメント追加回数: { type: 'number' },
+};
+
+// 改善提案一覧 v1.4.0 BUG-01 の構成（タイトル・日報以外の列名が候補名に一致しない）
+const UNRELATED_COLUMNS_PROPERTIES = {
+  Name: { type: 'title' },
+  DB_日報: { type: 'relation' },
+  完了: { type: 'checkbox' },
+  重要度: { type: 'number' },
 };
 
 // データベース → データソース（ds-<データベースID>）→ プロパティ定義を返すテスト用の Notion クライアント
@@ -55,6 +64,56 @@ describe('resolvePostsSchema', () => {
     expect(schema.pinnedKey).toBeUndefined();
     expect(schema.dailyReportKey).toBeUndefined();
     expect(schema.commentsCountKey).toBeUndefined();
+  });
+
+  it('タイトル以外は候補名に一致しない列を同じ型でも拾わない', () => {
+    expect(resolvePostsSchema(UNRELATED_COLUMNS_PROPERTIES)).toEqual({
+      titleKey: 'Name',
+      tagsKey: undefined,
+      pinnedKey: undefined,
+      dailyReportKey: 'DB_日報',
+      commentsCountKey: undefined,
+    });
+  });
+});
+
+// 作成日時・作成者（Notion が自動で設定する列）。接続状況画面には表示するが、resolvePostsSchema の解決対象ではない
+const AUTO_COLUMNS_PROPERTIES = {
+  作成日時: { type: 'created_time' },
+  作成者: { type: 'created_by' },
+};
+
+// resolvePostsSchema の 5 項目（titleKey・tagsKey・pinnedKey・dailyReportKey・commentsCountKey）で解決された列名
+// - DB に存在しない既定名（titleKey の 'タイトル'）と未解決（undefined）は除く
+function resolvedKeys(properties: Record<string, any>): string[] {
+  return [...new Set(Object.values(resolvePostsSchema(properties)))]
+    .filter((k): k is string => !!k && k in properties)
+    .sort();
+}
+
+// filterUsedPostsProperties の結果のうち、resolvePostsSchema の 5 項目の対象となる列（作成日時・作成者を除く）
+function displayedSchemaKeys(properties: Record<string, any>): string[] {
+  return filterUsedPostsProperties(properties)
+    .filter((k) => !['created_time', 'created_by'].includes(properties[k].type))
+    .sort();
+}
+
+describe('filterUsedPostsProperties と resolvePostsSchema の 5 項目の一致', () => {
+  it('候補名に一致しない列を含む DB で、接続状況の表示と resolvePostsSchema の 5 項目の解決結果が一致する', () => {
+    expect(filterUsedPostsProperties(UNRELATED_COLUMNS_PROPERTIES)).toEqual(['Name', 'DB_日報']);
+    expect(displayedSchemaKeys(UNRELATED_COLUMNS_PROPERTIES)).toEqual(resolvedKeys(UNRELATED_COLUMNS_PROPERTIES));
+  });
+
+  it('候補名どおりの列名の DB でも、resolvePostsSchema の 5 項目の解決結果と一致する', () => {
+    expect(displayedSchemaKeys(POSTS_PROPERTIES)).toEqual(resolvedKeys(POSTS_PROPERTIES));
+  });
+
+  it('作成日時・作成者を含む DB では、それらを除いた部分が resolvePostsSchema の 5 項目の解決結果と一致する', () => {
+    for (const base of [UNRELATED_COLUMNS_PROPERTIES, POSTS_PROPERTIES]) {
+      const properties = { ...base, ...AUTO_COLUMNS_PROPERTIES };
+      expect(filterUsedPostsProperties(properties)).toEqual(expect.arrayContaining(['作成日時', '作成者']));
+      expect(displayedSchemaKeys(properties)).toEqual(resolvedKeys(properties));
+    }
   });
 });
 
@@ -150,6 +209,11 @@ describe('getDailyReportDateKey', () => {
     expect(await getDailyReportDateKey(client, 'daily')).toBe('Date');
     expect(await getDailyReportDateKey(client, 'daily')).toBe('Date');
     expect(retrieve).toHaveBeenCalledTimes(1);
+  });
+
+  it('候補名に一致しなくても date 型の列にフォールバックする', async () => {
+    const { client } = fakeNotion({ 名前: { type: 'title' }, いつ: { type: 'date' } });
+    expect(await getDailyReportDateKey(client, 'daily')).toBe('いつ');
   });
 
   it('日付プロパティがなければ既定名を返す', async () => {

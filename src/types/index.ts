@@ -9,6 +9,12 @@ export interface TagsResponse {
   limit?: number | null;
 }
 
+// GET /api/config のレスポンス（タグ DB・日報 DB が設定済みか。接続できるかは含まない）
+export interface AppConfig {
+  tagsConfigured: boolean;
+  dailyReportConfigured: boolean;
+}
+
 export interface Post {
   id: string;
   title: string;

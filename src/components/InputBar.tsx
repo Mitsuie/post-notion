@@ -65,13 +65,13 @@ export function InputBar({
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 下書き自動管理フック
-  const { restoreDraft, saveDraft, clearDraft } = useDraft(availableTags);
+  const { restoreDraft, saveDraft, saveDraftNow, clearDraft } = useDraft(availableTags);
 
-  // 下書き（Draft）の自動復元
+  // 下書き（Draft）の自動復元（マウント時とタグ一覧の取得状況が変わったときに評価し、入力のたびには走らせない）
   useEffect(() => {
     restoreDraft((draft, matchedTags) => {
-      if (draft.title && !content) setContent(draft.title);
-      if (draft.body && !body) setBody(draft.body);
+      if (draft.title) setContent((prev) => prev || draft.title);
+      if (draft.body) setBody((prev) => prev || draft.body);
       if (typeof draft.pinned === 'boolean') {
         setIsPinned(draft.pinned);
       } else {
@@ -84,9 +84,9 @@ export function InputBar({
       }
       if (matchedTags.length > 0) setSelectedTags(matchedTags);
     });
-  }, [restoreDraft, content, body, isDailyReportConfigured, defaultPinned, defaultDailyReport]);
+  }, [restoreDraft, isDailyReportConfigured, defaultPinned, defaultDailyReport]);
 
-  // 下書き（Draft）の自動保存
+  // 下書き（Draft）の自動保存（デバウンス）
   useEffect(() => {
     saveDraft({
       title: content,
@@ -150,7 +150,7 @@ export function InputBar({
           setSelectedTags(pendingInput.selectedTags);
           setIsPinned(pendingInput.isPinned);
           setLinkDailyReport(pendingInput.linkDailyReport);
-          saveDraft({
+          saveDraftNow({
             title: pendingInput.content,
             body: pendingInput.body,
             tagIds: pendingInput.selectedTags.map((t) => t.id),

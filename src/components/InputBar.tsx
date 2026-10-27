@@ -69,20 +69,13 @@ export function InputBar({
 
   // 下書き（Draft）の自動復元（マウント時とタグ一覧の取得状況が変わったときに評価し、入力のたびには走らせない）
   useEffect(() => {
-    restoreDraft((draft, matchedTags) => {
-      if (draft.title) setContent((prev) => prev || draft.title);
-      if (draft.body) setBody((prev) => prev || draft.body);
-      if (typeof draft.pinned === 'boolean') {
-        setIsPinned(draft.pinned);
-      } else {
-        setIsPinned(defaultPinned);
-      }
-      if (typeof draft.linkDailyReport === 'boolean') {
-        setLinkDailyReport(isDailyReportConfigured ? draft.linkDailyReport : false);
-      } else {
-        setLinkDailyReport(isDailyReportConfigured ? defaultDailyReport : false);
-      }
-      if (matchedTags.length > 0) setSelectedTags(matchedTags);
+    restoreDraft({ isDailyReportConfigured, defaultPinned, defaultDailyReport }, (values) => {
+      const { title, body: restoredBody, pinned, linkDailyReport: restoredLinkDailyReport, tags } = values;
+      if (title) setContent((prev) => prev || title);
+      if (restoredBody) setBody((prev) => prev || restoredBody);
+      if (pinned !== undefined) setIsPinned(pinned);
+      if (restoredLinkDailyReport !== undefined) setLinkDailyReport(restoredLinkDailyReport);
+      if (tags.length > 0) setSelectedTags(tags);
     });
   }, [restoreDraft, isDailyReportConfigured, defaultPinned, defaultDailyReport]);
 

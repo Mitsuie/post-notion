@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseInline, splitText, toRichText, RICH_TEXT_CONTENT_MAX, RICH_TEXT_ITEMS_MAX } from './richText.ts';
+import { parseInline, richTextToMarkdown, splitText, toInlineRichText, toRichText, RICH_TEXT_CONTENT_MAX, RICH_TEXT_ITEMS_MAX } from './richText.ts';
 
 function lengthsOf(text: string): number[] {
   return toRichText(text).richText.map((t) => t.text.content.length);
@@ -142,5 +142,69 @@ describe('parseInline', () => {
   it(`${RICH_TEXT_ITEMS_MAX} 要素を超える分は切り捨てる`, () => {
     const text = Array.from({ length: 80 }, (_, i) => `**${i}** `).join('');
     expect(parseInline(text)).toHaveLength(RICH_TEXT_ITEMS_MAX);
+  });
+});
+
+describe('toInlineRichText', () => {
+  it('parseInline と同じ配列を返し、100 要素以下なら truncated: false', () => {
+    const text = Array.from({ length: 50 }, (_, i) => `**b${i}**`).join(' ');
+    const result = toInlineRichText(text);
+    expect(result.richText).toEqual(parseInline(text));
+    expect(result.richText).toHaveLength(RICH_TEXT_ITEMS_MAX - 1);
+    expect(result.truncated).toBe(false);
+  });
+
+  it(`ちょうど ${RICH_TEXT_ITEMS_MAX} 要素は truncated: false、超えると true`, () => {
+    const exact = `${Array.from({ length: 50 }, (_, i) => `**b${i}**`).join(' ')} `;
+    expect(toInlineRichText(exact)).toMatchObject({ truncated: false });
+    expect(toInlineRichText(exact).richText).toHaveLength(RICH_TEXT_ITEMS_MAX);
+    const over = `${exact}x **y**`;
+    expect(toInlineRichText(over).truncated).toBe(true);
+    expect(toInlineRichText(over).richText).toHaveLength(RICH_TEXT_ITEMS_MAX);
+  });
+});
+
+describe('richTextToMarkdown', () => {
+  it('parseInline の結果を元の文字列に戻す', () => {
+    for (const text of [
+      '**太字** と [リンク](https://example.com)',
+      '1行目 **太字**\n2行目 `code`\n\n4行目 ~~取消~~ *斜体* _斜体_',
+      'ただのテキスト',
+    ]) {
+      const expected = text.replace('_斜体_', '*斜体*');
+      expect(richTextToMarkdown(parseInline(text))).toBe(expected);
+    }
+    expect(richTextToMarkdown([])).toBe('');
+  });
+
+  it('2,000 文字で分割された同じ装飾の要素は 1 つにまとめて記号を付ける', () => {
+    const bold = `**${'b'.repeat(RICH_TEXT_CONTENT_MAX + 500)}**`;
+    expect(parseInline(bold)).toHaveLength(2);
+    expect(richTextToMarkdown(parseInline(bold))).toBe(bold);
+    const link = `[${'l'.repeat(RICH_TEXT_CONTENT_MAX + 1)}](https://example.com)`;
+    expect(richTextToMarkdown(parseInline(link))).toBe(link);
+  });
+
+  it('Notion API の応答の形（plain_text・href・すべての annotations）を扱う', () => {
+    const plain = { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' };
+    expect(
+      richTextToMarkdown([
+        { plain_text: '太字斜体', href: null, annotations: { ...plain, bold: true, italic: true } },
+        { plain_text: ' ', href: null, annotations: plain },
+        { plain_text: 'コード', href: 'https://example.com/a', annotations: { ...plain, code: true } },
+        { plain_text: ' 下線', href: null, annotations: { ...plain, underline: true } },
+      ])
+    ).toBe('***太字斜体*** [`コード`](https://example.com/a) 下線');
+  });
+
+  it('装飾の内側の先頭・末尾の空白と改行は記号の外に出す', () => {
+    expect(richTextToMarkdown([{ plain_text: ' 太字 ', annotations: { bold: true } }])).toBe(' **太字** ');
+    expect(richTextToMarkdown([{ plain_text: 'a\n\nb ', annotations: { bold: true } }])).toBe('**a**\n\n**b** ');
+    expect(richTextToMarkdown([{ plain_text: '  ', annotations: { bold: true } }])).toBe('  ');
+  });
+
+  it('http(s) 以外のリンクと、バッククォートを含むコードは記号を付けない', () => {
+    expect(richTextToMarkdown([{ plain_text: 'ページ', href: '/0123456789abcdef' }])).toBe('ページ');
+    expect(richTextToMarkdown([{ plain_text: 'a`b', annotations: { code: true } }])).toBe('a`b');
   });
 });

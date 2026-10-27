@@ -18,7 +18,7 @@ import {
   isValidationError,
 } from '../utils/schema.ts';
 import { parseMarkdownToNotionBlocks } from '../utils/markdownToNotion.ts';
-import { toRichText } from '../utils/richText.ts';
+import { toRichText, toInlineRichText, richTextToMarkdown } from '../utils/richText.ts';
 import { chunk, CHILDREN_MAX } from '../utils/blocks.ts';
 import { resolveDailyReportPageId } from '../utils/dailyReport.ts';
 import { syncCommentsCount, incrementCommentsCount, listAllComments } from '../utils/comments.ts';
@@ -354,7 +354,8 @@ postsRouter.get('/:id/comments', async (c) => {
 
     const { results, truncated } = await listAllComments(notion, id);
     const comments: CommentItem[] = results.map((comment: any) => {
-      const text = comment.rich_text?.map((t: any) => t.plain_text).join('') || '';
+      // Notion 上の装飾を Markdown 記法に戻す（アプリ内では MarkdownView で表示する）
+      const text = richTextToMarkdown(comment.rich_text ?? []);
       return {
         id: comment.id,
         discussionId: comment.discussion_id,
@@ -419,8 +420,11 @@ postsRouter.post('/:id/comments', async (c) => {
     // Posts DB に属するページのみコメントできる（取得したページはコメント件数の更新で使い回す）
     const page = await assertPostsPage(notion, id, env.NOTION_POSTS_DATABASE_ID);
 
+    // インライン装飾を Notion の装飾に変換する。100 要素を超えて切り捨てが起きる場合は、
+    // 内容を失わないよう装飾なしのテキスト（2,000 文字ごとの分割のみ）で送る
+    const inline = toInlineRichText(text);
     const createArgs: any = {
-      rich_text: toRichText(text).richText,
+      rich_text: inline.truncated ? toRichText(text).richText : inline.richText,
     };
 
     if (payload.discussionId) {
@@ -435,7 +439,7 @@ postsRouter.post('/:id/comments', async (c) => {
     const resultItem: CommentItem = {
       id: comment.id,
       discussionId: comment.discussion_id,
-      text: comment.rich_text?.map((t: any) => t.plain_text).join('') || text,
+      text: richTextToMarkdown(comment.rich_text ?? []) || text,
       createdTime: comment.created_time || new Date().toISOString(),
       createdBy: {
         id: comment.created_by?.id || '',

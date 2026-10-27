@@ -207,4 +207,34 @@ describe('richTextToMarkdown', () => {
     expect(richTextToMarkdown([{ plain_text: 'ページ', href: '/0123456789abcdef' }])).toBe('ページ');
     expect(richTextToMarkdown([{ plain_text: 'a`b', annotations: { code: true } }])).toBe('a`b');
   });
+
+  it('太字・斜体が強調と認識されない並び（内側の端が句読点・記号で、外側が文字）では記号を付けない', () => {
+    const bold = { bold: true };
+    expect(richTextToMarkdown([{ plain_text: '重要！', annotations: bold }, { plain_text: 'です' }])).toBe('重要！です');
+    expect(richTextToMarkdown([{ plain_text: 'です' }, { plain_text: '「注意」', annotations: bold }])).toBe('です「注意」');
+    expect(richTextToMarkdown([{ plain_text: '重要！', annotations: { italic: true } }, { plain_text: 'です' }])).toBe('重要！です');
+    expect(richTextToMarkdown([{ plain_text: 'a' }, { plain_text: 'x', annotations: { bold: true, code: true } }, { plain_text: 'b' }])).toBe(
+      'a`x`b'
+    );
+  });
+
+  it('外側が空白・句読点・行の端・リンクの括弧なら、内側の端が句読点・記号でも記号を付ける', () => {
+    const bold = { bold: true };
+    expect(richTextToMarkdown([{ plain_text: '「注意」', annotations: bold }, { plain_text: ' です' }])).toBe('**「注意」** です');
+    expect(richTextToMarkdown([{ plain_text: '「注意」 ', annotations: bold }, { plain_text: 'です' }])).toBe('**「注意」** です');
+    expect(richTextToMarkdown([{ plain_text: '重要！', annotations: bold }, { plain_text: '、です' }])).toBe('**重要！**、です');
+    expect(richTextToMarkdown([{ plain_text: '重要！', annotations: bold }])).toBe('**重要！**');
+    expect(richTextToMarkdown([{ plain_text: '重要！\n次', annotations: bold }, { plain_text: 'です' }])).toBe('**重要！**\n**次**です');
+    expect(richTextToMarkdown([{ plain_text: '重要！', annotations: bold, href: 'https://example.com' }, { plain_text: 'です' }])).toBe(
+      '[**重要！**](https://example.com)です'
+    );
+    // 内側の端が句読点でなければ、外側が文字でも強調になる
+    expect(richTextToMarkdown([{ plain_text: '太字', annotations: bold }, { plain_text: 'です' }])).toBe('**太字**です');
+  });
+
+  it('括弧・空白を含むリンクの URL は <…> で囲み、< > を含む URL はリンクにしない', () => {
+    expect(richTextToMarkdown([{ plain_text: 'a', href: 'https://x.com/a)b' }])).toBe('[a](<https://x.com/a)b>)');
+    expect(richTextToMarkdown([{ plain_text: 'a', href: 'https://x.com/a(b)' }])).toBe('[a](<https://x.com/a(b)>)');
+    expect(richTextToMarkdown([{ plain_text: 'a', href: 'https://x.com/a<b>' }])).toBe('a');
+  });
 });

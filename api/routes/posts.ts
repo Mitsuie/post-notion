@@ -435,7 +435,17 @@ postsRouter.post('/:id/comments', async (c) => {
       };
     }
 
-    const comment: any = await notion.comments.create(createArgs);
+    let comment: any;
+    try {
+      comment = await notion.comments.create(createArgs);
+    } catch (error: unknown) {
+      // 装飾付きの rich_text を Notion が受け付けない場合（リンクの URL が長すぎる・不正など）は、
+      // 装飾なしのテキストで 1 回だけ送り直す
+      const decorated = !inline.truncated && inline.richText.some((t) => t.annotations || t.text.link);
+      if (!decorated || !isValidationError(error)) throw error;
+      console.error(`Failed to create formatted comment for post ${id}, retrying without formatting:`, error);
+      comment = await notion.comments.create({ ...createArgs, rich_text: toRichText(text).richText });
+    }
     const resultItem: CommentItem = {
       id: comment.id,
       discussionId: comment.discussion_id,

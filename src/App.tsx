@@ -6,6 +6,7 @@ import { useTags } from './hooks/useTags';
 import { checkHasDraft } from './hooks/useDraft';
 import { clearCacheAndReload, reloadPage } from './utils/pwa';
 import { POSTS_QUERY_KEY } from './utils/postsCache';
+import { getPostErrorMessage } from './utils/postErrors';
 import { getItem, setItem, STORAGE_KEYS } from './utils/storage';
 import { InputBar } from './components/InputBar';
 import { Timeline } from './components/Timeline';
@@ -113,8 +114,8 @@ export default function App() {
     ) => {
       createPost(input, {
         onError: (err: unknown) => {
-          const msg = getErrorMessage(err, '投稿の送信に失敗しました');
-          toast.error(`${msg}（入力内容を復元しました）`);
+          // 通信エラー時の投稿一覧の再取得は、usePostMutations の onSettled が行う
+          toast.error(getPostErrorMessage(err));
           options?.onError?.(err);
         },
         onSuccess: (data) => {

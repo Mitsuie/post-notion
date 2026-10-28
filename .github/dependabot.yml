@@ -12,6 +12,13 @@ updates:
       npm-minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      # 実行環境の Node（.node-version）を上げるときに合わせて上げる
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # typescript-eslint が TS 7 に対応してから、計画的に移行する
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -21,11 +21,11 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@notionhq/client": "^5.27.0",
-    "@tanstack/react-query": "^5.59.16",
-    "dotenv": "^18.0.3",
+    "@notionhq/client": "^5.28.0",
+    "@tanstack/react-query": "^5.104.5",
+    "dotenv": "^18.0.9",
     "hono": "^4.6.5",
-    "lucide-react": "^1.58.0",
+    "lucide-react": "^1.61.0",
     "notion-to-md": "^3.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -45,7 +45,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.72.1",
-    "vite": "^8.3.4",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5",
     "wrangler": "^4.153.0"
   }

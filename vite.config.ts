@@ -44,7 +44,8 @@ export default defineConfig({
     },
   },
   test: {
+    // DOM が必要なテストだけ、ファイル先頭の `// @vitest-environment happy-dom` で切り替える
     environment: 'node',
-    include: ['{src,api,scripts}/**/*.test.ts'],
+    include: ['{src,api,scripts}/**/*.test.{ts,tsx}'],
   },
 });

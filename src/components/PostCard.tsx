@@ -86,79 +86,46 @@ export function PostCard({
     })
     .filter(Boolean);
 
+  const cardClassName = [
+    'glass post-card',
+    post.pinned && 'post-card--pinned',
+    post.isOptimistic && 'post-card--optimistic',
+  ].filter(Boolean).join(' ');
+  const titleBlockClassName = resolvedTags.length > 0
+    ? 'post-card__title-block post-card__title-block--with-tags'
+    : 'post-card__title-block';
+
   return (
-    <article
-      className="glass"
-      style={{
-        borderRadius: 'var(--radius-lg)',
-        padding: '16px',
-        marginBottom: '12px',
-        position: 'relative',
-        transition: 'all 0.2s ease',
-        opacity: post.isOptimistic ? 0.7 : 1,
-        border: post.pinned
-          ? '1px solid var(--pinned-border)'
-          : '1px solid var(--border-color)',
-        background: post.pinned
-          ? 'var(--pinned-gradient)'
-          : 'var(--bg-card)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
+    <article className={cardClassName}>
       {/* 上部ヘッダー（作成者・ピン留め・日時） */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-          fontSize: '0.8rem',
-          color: 'var(--text-secondary)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="post-card__header">
+        <div className="post-card__header-start">
           {/* ピン留め動的トグルボタン */}
           <button
             type="button"
             onClick={() => onTogglePin?.(post.id, !post.pinned)}
             aria-pressed={post.pinned}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '3px',
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-sm)',
-              background: post.pinned ? 'var(--pinned-bg)' : 'var(--bg-tertiary)',
-              color: post.pinned ? 'var(--pinned-color)' : 'var(--text-secondary)',
-              border: `1px solid ${post.pinned ? 'var(--pinned-border)' : 'var(--border-color)'}`,
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className="post-card__pin"
             title={post.pinned ? 'ピン固定を解除' : 'ピン留めして上部に固定'}
           >
-            <Pin size={11} style={{ fill: post.pinned ? 'currentColor' : 'none' }} />
+            <Pin size={11} />
             {post.pinned ? '固定中' : '固定'}
           </button>
 
           {/* ユーザー名 */}
-          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+          <span className="post-card__author">
             {post.createdBy?.name || 'ユーザー'}
           </span>
         </div>
 
         {/* 投稿日時 / 送信中ステータス */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="post-card__meta">
           {post.isOptimistic ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-primary)', fontSize: '0.75rem', fontWeight: 500 }}>
+            <span className="post-card__sending">
               <Loader2 size={12} className="animate-spin" /> 送信中...
             </span>
           ) : (
-            <span
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}
-              title={formatFullDate(post.createdTime)}
-            >
+            <span className="post-card__time" title={formatFullDate(post.createdTime)}>
               <Clock size={12} /> {formatDate(post.createdTime)}
             </span>
           )}
@@ -167,7 +134,7 @@ export function PostCard({
 
       {/* 本文タイトル（「…」メニューから編集中はテキストエリアに置き換える） */}
       {isEditingTitle ? (
-        <div style={{ marginBottom: resolvedTags.length > 0 ? '10px' : '8px' }}>
+        <div className={titleBlockClassName}>
           <textarea
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
@@ -175,21 +142,9 @@ export function PostCard({
             aria-label="タイトルを編集"
             rows={2}
             autoFocus
-            className="input-title"
-            style={{
-              width: '100%',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-focus)',
-              borderRadius: 'var(--radius-md)',
-              padding: '8px 10px',
-              color: 'var(--text-primary)',
-              lineHeight: 1.6,
-              resize: 'vertical',
-              fontFamily: 'inherit',
-              outline: 'none',
-            }}
+            className="input-title post-card__title-input"
           />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '4px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <div className="post-card__title-actions">
             <span className="hide-on-mobile">Enter で保存 / Esc で取消</span>
             <button type="button" className="text-btn-muted" onClick={cancelEditTitle}>
               取消
@@ -200,36 +155,16 @@ export function PostCard({
           </div>
         </div>
       ) : (
-        <div
-          style={{
-            fontSize: '0.95rem',
-            lineHeight: 1.6,
-            color: 'var(--text-primary)',
-            wordBreak: 'break-word',
-            whiteSpace: 'pre-wrap',
-            marginBottom: resolvedTags.length > 0 ? '10px' : '8px',
-          }}
-        >
+        <div className={`post-card__title ${titleBlockClassName}`}>
           {post.title}
         </div>
       )}
 
       {/* タグ一覧バッジ */}
       {resolvedTags.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+        <div className="post-card__tags">
           {resolvedTags.map((name, i) => (
-            <span
-              key={i}
-              style={{
-                fontSize: '0.75rem',
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-full)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-color)',
-                fontWeight: 500,
-              }}
-            >
+            <span key={i} className="post-card__tag">
               #{name}
             </span>
           ))}
@@ -238,34 +173,23 @@ export function PostCard({
 
       {/* 本文Markdownブロック展開エリア */}
       {showDetails && (
-        <div
-          style={{
-            margin: '10px 0 12px',
-            padding: '12px 14px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--bg-tertiary)',
-            border: '1px solid var(--border-color)',
-            fontSize: '0.85rem',
-            lineHeight: 1.6,
-            color: 'var(--text-primary)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="post-card__details">
+          <div className="post-card__details-header">
+            <span className="post-card__details-label">
               <FileText size={13} /> 本文
             </span>
           </div>
 
           {isBlocksLoading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', padding: '12px 0' }}>
+            <div className="post-card__details-loading">
               <Loader2 size={14} className="animate-spin" /> 本文ブロックを取得中...
             </div>
           ) : blocksData?.markdown && blocksData.markdown.trim() ? (
-            <div className="markdown-content" style={{ overflowX: 'auto' }}>
+            <div className="markdown-content post-card__markdown">
               <MarkdownView>{blocksData.markdown}</MarkdownView>
             </div>
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', margin: '4px 0' }}>
+            <p className="post-card__details-empty">
               本文ブロックはありません（Notion側で本文を追加するとここにMarkdown表示されます）。
             </p>
           )}
@@ -273,35 +197,14 @@ export function PostCard({
       )}
 
       {/* 下部アクションバー */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: '8px',
-          borderTop: '1px solid var(--border-color)',
-          fontSize: '0.75rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div className="post-card__footer">
+        <div className="post-card__footer-start">
           {/* 詳細展開ボタン */}
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
             aria-expanded={showDetails}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: showDetails ? 'var(--accent-primary)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 6px',
-              borderRadius: 'var(--radius-sm)',
-              transition: 'color 0.15s ease',
-              fontWeight: showDetails ? 600 : 400,
-            }}
+            className="post-card__details-toggle"
           >
             <FileText size={13} />
             <span className="hide-on-mobile">{showDetails ? '本文を閉じる' : '本文を表示'}</span>
@@ -311,25 +214,13 @@ export function PostCard({
 
           {/* 日報連携マーク */}
           {post.dailyReport && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '3px 5px',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--accent-primary)',
-                background: 'var(--accent-light)',
-                lineHeight: 1,
-              }}
-              title="日報連携済み (DB_日報)"
-            >
+            <span className="post-card__daily-report" title="日報連携済み (DB_日報)">
               <Calendar size={13} />
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="post-card__footer-end">
           {/* 1. Notionで開く */}
           {(post.url || post.id) && (
             <a
@@ -348,20 +239,12 @@ export function PostCard({
           {/* 2. 返信一覧ボタン */}
           <button
             type="button"
-            className="card-action-btn mobile-action-btn"
+            className={`card-action-btn mobile-action-btn post-card__thread-btn${commentsCount > 0 ? ' post-card__thread-btn--has-comments' : ''}`}
             onClick={() => setShowComments((prev) => !prev)}
             aria-expanded={showComments}
-            style={{
-              background: showComments ? 'var(--accent-light)' : undefined,
-              color: showComments || commentsCount > 0 ? 'var(--accent-primary)' : undefined,
-              fontWeight: showComments ? 600 : commentsCount > 0 ? 500 : 400,
-            }}
             title="返信コメント一覧を表示/非表示"
           >
-            <MessageCircle
-              size={13}
-              style={{ color: commentsCount > 0 || showComments ? 'var(--accent-primary)' : undefined }}
-            />
+            <MessageCircle size={13} />
             <span className="hide-on-mobile">返信一覧</span>
             <span className="show-on-mobile">返信</span>
             {commentsCount > 0 && <span>({commentsCount})</span>}
@@ -370,14 +253,9 @@ export function PostCard({
           {/* 3. 返信（入力欄）ボタン */}
           <button
             type="button"
-            className="card-action-btn mobile-action-btn"
+            className="card-action-btn mobile-action-btn post-card__thread-btn"
             onClick={() => setShowReplyForm((prev) => !prev)}
             aria-expanded={showReplyForm}
-            style={{
-              background: showReplyForm ? 'var(--accent-light)' : undefined,
-              color: showReplyForm ? 'var(--accent-primary)' : undefined,
-              fontWeight: showReplyForm ? 600 : 400,
-            }}
             title="この投稿に返信を作成"
           >
             <MessageSquarePlus size={13} />

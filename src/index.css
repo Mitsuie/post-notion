@@ -1049,3 +1049,266 @@ body {
   color: var(--text-primary);
   word-break: break-word;
 }
+
+/* ==========================================================================
+   タイムラインの投稿カード（PostCard）
+   ピン留め・送信中は修飾クラス、ボタンの選択状態は aria-pressed / aria-expanded で表現する。
+   返信一覧・返信ボタンの状態色は .card-action-btn:hover より優先させる（従来のインライン指定と同じ見た目にするため）
+   ========================================================================== */
+.post-card {
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.post-card--pinned {
+  border: 1px solid var(--pinned-border);
+  background: var(--pinned-gradient);
+}
+
+.post-card--optimistic {
+  opacity: 0.7;
+}
+
+/* 上部ヘッダー（作成者・ピン留め・日時） */
+.post-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.post-card__header-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.post-card__pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.post-card__pin[aria-pressed="true"] {
+  background: var(--pinned-bg);
+  color: var(--pinned-color);
+  border-color: var(--pinned-border);
+}
+.post-card__pin[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+
+.post-card__author {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.post-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.post-card__sending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.post-card__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+/* タイトル（表示・編集）。下にタグがあるときは余白を広げる */
+.post-card__title-block {
+  margin-bottom: 8px;
+}
+.post-card__title-block--with-tags {
+  margin-bottom: 10px;
+}
+
+.post-card__title {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.post-card__title-input {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+}
+
+.post-card__title-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* タグ */
+.post-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.post-card__tag {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+/* 本文の展開エリア */
+.post-card__details {
+  margin: 10px 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.post-card__details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 6px;
+}
+
+.post-card__details-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.post-card__details-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  padding: 12px 0;
+}
+
+.post-card__markdown {
+  overflow-x: auto;
+}
+
+.post-card__details-empty {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+  margin: 4px 0;
+}
+
+/* 下部アクションバー */
+.post-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.75rem;
+}
+
+.post-card__footer-start {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.post-card__footer-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.post-card__details-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
+  font-weight: 400;
+}
+.post-card__details-toggle[aria-expanded="true"] {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* 日報連携マーク */
+.post-card__daily-report {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 5px;
+  border-radius: var(--radius-sm);
+  color: var(--accent-primary);
+  background: var(--accent-light);
+  line-height: 1;
+}
+
+/* 返信一覧・返信ボタン（.card-action-btn と併用） */
+.post-card__thread-btn {
+  font-weight: 400;
+}
+.card-action-btn.post-card__thread-btn--has-comments {
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+.card-action-btn.post-card__thread-btn[aria-expanded="true"] {
+  background: var(--accent-light);
+  color: var(--accent-primary);
+  font-weight: 600;
+}

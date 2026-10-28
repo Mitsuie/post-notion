@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useInfiniteQuery, useIsRestoring, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { Post, PostsPage, CreatePostInput, CreatePostResult } from '../types';
 import { apiFetch } from '../utils/apiClient';
 import {
@@ -36,6 +36,10 @@ export function usePostsQuery(params: PostsQueryParams) {
     staleTime: 1000 * 60,
   });
 
+  // 端末に保存したキャッシュの復元中は取得が始まらず isLoading が false になるため、読み込み中として扱う
+  // （復元前の一瞬に「投稿がありません」が表示されるのを防ぐ）
+  const isRestoring = useIsRestoring();
+
   // 読み込み済みの全ページを1つの一覧に平坦化
   const posts = useMemo(
     () => postsQuery.data?.pages.flatMap((page) => page.posts) ?? [],
@@ -44,7 +48,7 @@ export function usePostsQuery(params: PostsQueryParams) {
 
   return {
     posts,
-    isLoading: postsQuery.isLoading,
+    isLoading: postsQuery.isLoading || isRestoring,
     isPlaceholderData: postsQuery.isPlaceholderData,
     fetchNextPage: postsQuery.fetchNextPage,
     hasNextPage: postsQuery.hasNextPage,

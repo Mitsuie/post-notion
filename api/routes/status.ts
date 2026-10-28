@@ -20,13 +20,13 @@ export const statusRouter = new Hono<{ Bindings: Bindings }>();
  * - データソースが複数ある場合は先頭を使い、警告文を返す（schema.ts の getDataSourceId と同じ選び方）
  */
 async function inspectDatabase(notion: Client, databaseId: string, fallbackTitle: string) {
-  const db: any = await notion.databases.retrieve({ database_id: databaseId });
+  const db = await notion.databases.retrieve({ database_id: databaseId });
   const { dataSourceId, dataSourceCount } = pickDataSource(db, databaseId);
-  const dataSource: any = await notion.dataSources.retrieve({ data_source_id: dataSourceId });
+  const dataSource = await notion.dataSources.retrieve({ data_source_id: dataSourceId });
   return {
-    title: db.title?.map((t: any) => t.plain_text).join('') || fallbackTitle,
+    title: ('title' in db ? db.title?.map((t) => t.plain_text).join('') : undefined) || fallbackTitle,
     dataSourceId,
-    properties: (dataSource.properties || {}) as Record<string, any>,
+    properties: ('properties' in dataSource ? dataSource.properties : undefined) || {},
     warning:
       dataSourceCount > 1
         ? `データソースが ${dataSourceCount} 件あるため、先頭のデータソースを使用しています`

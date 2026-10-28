@@ -28,6 +28,9 @@ export async function queryAll(
   return results;
 }
 
+// プロパティ名と型の対応（データソースのプロパティ定義・ページのプロパティ値のどちらもこの形を満たす）
+export type PropertyTypeMap = Record<string, { type: string }>;
+
 /**
  * Notion データベースのプロパティキーを候補名と型から自動検出するヘルパー
  * 1. 候補名との完全一致（大文字小文字無視）を優先探索
@@ -35,7 +38,7 @@ export async function queryAll(
  *    - 同じ型の列が複数ありうる場合（relation・checkbox・number など）に無関係な列を拾わないよう、既定は false
  */
 export function findPropertyKey(
-  properties: Record<string, any>,
+  properties: PropertyTypeMap,
   candidateNames: readonly string[],
   type: string,
   { allowTypeFallback = false }: { allowTypeFallback?: boolean } = {}
@@ -112,7 +115,7 @@ export const POSTS_DB_USED_PROPERTY_DEFINITIONS = [
 type PostsPropertyDefinition = (typeof POSTS_DB_USED_PROPERTY_DEFINITIONS)[number];
 
 // 定義（候補名・型・型フォールバック可否）に従ってプロパティキーを解決する
-function findDefinedPropertyKey(properties: Record<string, any>, def: PostsPropertyDefinition): string | undefined {
+function findDefinedPropertyKey(properties: PropertyTypeMap, def: PostsPropertyDefinition): string | undefined {
   return findPropertyKey(properties, def.candidates, def.type, { allowTypeFallback: def.allowTypeFallback });
 }
 
@@ -121,7 +124,7 @@ function findDefinedPropertyKey(properties: Record<string, any>, def: PostsPrope
  * - 実際の読み書き（schema.ts の resolvePostsSchema）と接続状況画面の表示（filterUsedPostsProperties）の両方がこれを使う
  */
 export function findPostsPropertyKey(
-  properties: Record<string, any>,
+  properties: PropertyTypeMap,
   name: PostsPropertyDefinition['name']
 ): string | undefined {
   const def = POSTS_DB_USED_PROPERTY_DEFINITIONS.find((d) => d.name === name);
@@ -131,7 +134,7 @@ export function findPostsPropertyKey(
 /**
  * DB_Post-Notion の全プロパティから、本アプリで利用しているプロパティ名のみを抽出するヘルパー
  */
-export function filterUsedPostsProperties(properties: Record<string, any>): string[] {
+export function filterUsedPostsProperties(properties: PropertyTypeMap): string[] {
   const usedKeySet = new Set<string>();
 
   for (const def of POSTS_DB_USED_PROPERTY_DEFINITIONS) {

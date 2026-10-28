@@ -31,18 +31,8 @@ function KeywordInput({ keyword, onChange }: { keyword: string; onChange: (keywo
   }, [value, keyword, onChange]);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        background: 'var(--bg-tertiary)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-sm)',
-        padding: '6px 8px',
-      }}
-    >
-      <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />
+    <div className="timeline-filter__keyword">
+      <Search size={13} className="timeline-filter__keyword-icon" aria-hidden="true" />
       <input
         type="search"
         value={value}
@@ -50,14 +40,7 @@ function KeywordInput({ keyword, onChange }: { keyword: string; onChange: (keywo
         placeholder="タイトルに含む文字で検索..."
         aria-label="タイトルのキーワード"
         maxLength={MAX_KEYWORD_LENGTH}
-        className="input-comment"
-        style={{
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          color: 'var(--text-primary)',
-          width: '100%',
-        }}
+        className="input-comment timeline-filter__keyword-input"
       />
       {value && (
         <button
@@ -67,7 +50,7 @@ function KeywordInput({ keyword, onChange }: { keyword: string; onChange: (keywo
             onChange('');
           }}
           aria-label="キーワードをクリア"
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}
+          className="timeline-filter__keyword-clear"
         >
           <X size={13} aria-hidden="true" />
         </button>
@@ -98,44 +81,17 @@ export function TimelineFilterModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="glass"
-      style={{
-        borderRadius: 'var(--radius-lg)',
-        padding: '16px',
-        marginBottom: '12px',
-        border: '1px solid var(--border-hover)',
-        boxShadow: 'var(--shadow-md)',
-        animation: 'fadeIn 0.15s ease',
-      }}
-    >
+    <div className="glass timeline-filter">
       {/* パネル上部ヘッダー */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '8px',
-          borderBottom: '1px solid var(--border-color)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-          <Filter size={14} style={{ color: 'var(--accent-primary)' }} />
+      <div className="timeline-filter__header">
+        <div className="timeline-filter__title">
+          <Filter size={14} className="timeline-filter__title-icon" />
           <span>フィルター設定</span>
         </div>
         <button
           type="button"
           onClick={onClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: '2px',
-            display: 'flex',
-            alignItems: 'center',
-          }}
+          className="timeline-filter__close"
           title="フィルター設定パネルを閉じる"
           aria-label="閉じる"
         >
@@ -144,8 +100,8 @@ export function TimelineFilterModal({
       </div>
 
       {/* セクション0: キーワード（タイトル）検索 */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div className="timeline-filter__section">
+        <div className="timeline-filter__label">
           <Search size={12} />
           <span>キーワード (タイトル)</span>
         </div>
@@ -156,14 +112,16 @@ export function TimelineFilterModal({
       </div>
 
       {/* セクション1: 作成日フィルター */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div className="timeline-filter__section">
+        <div className="timeline-filter__label">
           <Calendar size={12} />
           <span>作成日 (Created Time)</span>
         </div>
 
         {/* 期間プリセットピルボタン群 */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: filter.datePreset === 'custom' ? '10px' : 0 }}>
+        <div
+          className={`timeline-filter__presets ${filter.datePreset === 'custom' ? 'timeline-filter__presets--with-custom' : ''}`}
+        >
           {[
             { id: 'all' as DatePreset, label: 'すべて（全期間）' },
             { id: 'today' as DatePreset, label: '今日' },
@@ -178,17 +136,7 @@ export function TimelineFilterModal({
                 type="button"
                 onClick={() => setFilter((prev) => ({ ...prev, datePreset: preset.id }))}
                 aria-pressed={isActive}
-                style={{
-                  background: isActive ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                  border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                  color: isActive ? '#fff' : 'var(--text-secondary)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '4px 10px',
-                  fontSize: '0.75rem',
-                  fontWeight: isActive ? 600 : 400,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className="timeline-filter__preset"
               >
                 {preset.label}
               </button>
@@ -198,68 +146,33 @@ export function TimelineFilterModal({
 
         {/* カレンダー日付範囲指定ピッカー（「日付指定」選択時のみインライン表示） */}
         {filter.datePreset === 'custom' && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'var(--bg-tertiary)',
-              padding: '8px 12px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-color)',
-              flexWrap: 'wrap',
-              fontSize: '0.75rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>開始:</span>
+          <div className="timeline-filter__custom-date">
+            <div className="timeline-filter__date-field">
+              <span className="timeline-filter__date-label">開始:</span>
               <input
                 type="date"
                 value={filter.customStartDate}
                 onChange={(e) => setFilter((prev) => ({ ...prev, customStartDate: e.target.value }))}
                 aria-label="開始日"
-                className="input-date"
-                style={{
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  padding: '3px 6px',
-                  borderRadius: 'var(--radius-sm)',
-                  outline: 'none',
-                }}
+                className="input-date timeline-filter__date-input"
               />
             </div>
-            <span style={{ color: 'var(--text-muted)' }}>〜</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>終了:</span>
+            <span className="timeline-filter__date-label">〜</span>
+            <div className="timeline-filter__date-field">
+              <span className="timeline-filter__date-label">終了:</span>
               <input
                 type="date"
                 value={filter.customEndDate}
                 onChange={(e) => setFilter((prev) => ({ ...prev, customEndDate: e.target.value }))}
                 aria-label="終了日"
-                className="input-date"
-                style={{
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  padding: '3px 6px',
-                  borderRadius: 'var(--radius-sm)',
-                  outline: 'none',
-                }}
+                className="input-date timeline-filter__date-input"
               />
             </div>
             {(filter.customStartDate || filter.customEndDate) && (
               <button
                 type="button"
                 onClick={() => setFilter((prev) => ({ ...prev, customStartDate: '', customEndDate: '' }))}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                  marginLeft: 'auto',
-                }}
+                className="timeline-filter__date-clear"
               >
                 クリア
               </button>
@@ -270,19 +183,9 @@ export function TimelineFilterModal({
 
       {/* セクション2: タグフィルター（複数選択可 - タグDB設定時かつタグ存在時のみ表示） */}
       {isTagsConfigured && availableTags.length > 0 && (
-        <div style={{ marginBottom: '16px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              marginBottom: '8px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="timeline-filter__section">
+          <div className="timeline-filter__label-row">
+            <div className="timeline-filter__label-text">
               <TagIcon size={12} />
               <span>タグ (複数選択可・いずれかを含む)</span>
             </div>
@@ -290,14 +193,7 @@ export function TimelineFilterModal({
               <button
                 type="button"
                 onClick={() => setFilter((prev) => ({ ...prev, selectedTagIds: [] }))}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-primary)',
-                  cursor: 'pointer',
-                  fontSize: '0.7rem',
-                  padding: 0,
-                }}
+                className="timeline-filter__tag-clear"
               >
                 タグ全解除 ({filter.selectedTagIds.length}件選択中)
               </button>
@@ -305,16 +201,7 @@ export function TimelineFilterModal({
           </div>
 
           {/* タグ一覧（縦並びチェックリスト形式） */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              maxHeight: '220px',
-              overflowY: 'auto',
-              paddingRight: '4px',
-            }}
-          >
+          <div className="timeline-filter__tag-list">
             {availableTags.map((tag) => {
               const isSelected = filter.selectedTagIds.includes(tag.id);
               return (
@@ -324,6 +211,7 @@ export function TimelineFilterModal({
                   className={`filter-tag-item ${isSelected ? 'selected' : ''}`}
                   onClick={() => onToggleTag(tag.id)}
                   aria-pressed={isSelected}
+                  // 選択状態による色はインラインに残す（クラスへ移すと .filter-tag-item:hover が効き、見た目が変わるため）
                   style={{
                     background: isSelected ? 'var(--accent-light)' : 'var(--bg-tertiary)',
                     border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-color)'}`,
@@ -332,23 +220,10 @@ export function TimelineFilterModal({
                   }}
                 >
                   {/* チェックボックス風アイコン */}
-                  <span
-                    style={{
-                      width: '15px',
-                      height: '15px',
-                      borderRadius: '3px',
-                      border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                      background: isSelected ? 'var(--accent-primary)' : 'var(--bg-card)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      flexShrink: 0,
-                    }}
-                  >
+                  <span className="timeline-filter__tag-check">
                     {isSelected && <Check size={11} strokeWidth={3} />}
                   </span>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span className="timeline-filter__tag-name">
                     {tag.name}
                   </span>
                 </button>
@@ -359,18 +234,8 @@ export function TimelineFilterModal({
       )}
 
       {/* パネル下部フッターアクション */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: '10px',
-          borderTop: '1px solid var(--border-color)',
-          flexWrap: 'wrap',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="timeline-filter__footer">
+        <div className="timeline-filter__footer-actions">
           <button
             type="button"
             className="text-btn-muted"
@@ -395,16 +260,7 @@ export function TimelineFilterModal({
         <button
           type="button"
           onClick={onClose}
-          style={{
-            background: 'var(--accent-primary)',
-            border: 'none',
-            color: '#fff',
-            borderRadius: 'var(--radius-sm)',
-            padding: '4px 12px',
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
+          className="timeline-filter__done"
         >
           完了
         </button>

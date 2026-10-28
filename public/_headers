@@ -1,3 +1,4 @@
+# Content-Security-Policy-Report-Only はビルド時に dist/_headers へ追加する（インラインスクリプトのハッシュを含むため。vite.config.ts と scripts/csp.ts を参照）
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

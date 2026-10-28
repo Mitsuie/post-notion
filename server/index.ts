@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { secureHeaders } from 'hono/secure-headers';
 import { app as apiApp, SECURE_HEADERS_OPTIONS } from '../api/app.ts';
 import type { Bindings } from '../api/types.ts';
+import { buildContentSecurityPolicy, CSP_HEADER_NAME } from '../scripts/csp.ts';
 
 const cwd = process.cwd();
 const envPath = path.resolve(cwd, '.env');
@@ -40,6 +41,32 @@ const serverApp = new Hono<{ Bindings: Bindings }>();
 
 // 0. セキュリティ関連ヘッダー（静的ファイル・SPA フォールバックにも付与）
 serverApp.use('*', secureHeaders(SECURE_HEADERS_OPTIONS));
+
+// CSP（Report-Only）。Pages の dist/_headers と同じく、dist/index.html のインラインスクリプトのハッシュから作る
+// 起動中に再ビルドしても追従するよう、index.html の更新日時が変わったときだけ再計算する
+const indexHtmlPath = path.join(distDir, 'index.html');
+let cspCache: { mtimeMs: number; policy: string } | null = null;
+
+function getContentSecurityPolicy(): string | null {
+  try {
+    const { mtimeMs } = fs.statSync(indexHtmlPath);
+    if (cspCache?.mtimeMs !== mtimeMs) {
+      cspCache = { mtimeMs, policy: buildContentSecurityPolicy(fs.readFileSync(indexHtmlPath, 'utf-8')) };
+    }
+    return cspCache.policy;
+  } catch {
+    // 未ビルド（dist/index.html がない）の場合は付与しない
+    return null;
+  }
+}
+
+serverApp.use('*', async (c, next) => {
+  await next();
+  const policy = getContentSecurityPolicy();
+  if (policy) {
+    c.header(CSP_HEADER_NAME, policy);
+  }
+});
 
 // 1. 環境変数の注入（最新の .dev.vars / .env を c.env に透過的に注入）
 // 静的ファイル配信ではファイルを読む必要がないため、API リクエストに限定する

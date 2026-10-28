@@ -194,10 +194,10 @@
         Cloudflare Access の認証期限が切れたか、通信エラーが発生しました。<br>
         下のボタンを押して再ログインしてください。
       </p>
-      <button type="button" class="boot-fallback-btn boot-btn-primary" onclick="window.reauthAndReload()">
+      <button type="button" id="boot-reauth-btn" class="boot-fallback-btn boot-btn-primary">
         再ログインする（再読み込み）
       </button>
-      <button type="button" class="boot-fallback-btn boot-btn-secondary" onclick="window.clearCacheAndReload()">
+      <button type="button" id="boot-clear-cache-btn" class="boot-fallback-btn boot-btn-secondary">
         キャッシュを初期化して再接続
       </button>
     </div>
@@ -234,6 +234,21 @@
           window.location.reload(true);
         }
       };
+
+      // ボタンの処理（CSP ではインラインのイベントハンドラをハッシュで許可できないため、ここで登録する）
+      // （要素が見つからなくても以降の起動監視は止めない）
+      var reauthBtn = document.getElementById('boot-reauth-btn');
+      if (reauthBtn) {
+        reauthBtn.addEventListener('click', function() {
+          window.reauthAndReload();
+        });
+      }
+      var clearCacheBtn = document.getElementById('boot-clear-cache-btn');
+      if (clearCacheBtn) {
+        clearCacheBtn.addEventListener('click', function() {
+          window.clearCacheAndReload();
+        });
+      }
 
       // React が正常起動した際に呼ばれるフラグ
       window.__APP_MOUNTED__ = function() {

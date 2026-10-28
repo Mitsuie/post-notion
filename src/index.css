@@ -612,3 +612,257 @@ body {
 
 
 
+/* ==========================================================================
+   タイムラインのフィルター設定パネル（TimelineFilterModal）
+   期間プリセットの選択状態は aria-pressed で表現する。
+   タグ項目（.filter-tag-item）の選択状態による色はコンポーネント側のインラインに残す
+   （クラスへ移すと、現状は効いていない .filter-tag-item:hover が効いて見た目が変わるため）
+   ========================================================================== */
+.timeline-filter {
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-hover);
+  box-shadow: var(--shadow-md);
+  animation: fadeIn 0.15s ease;
+}
+
+.timeline-filter__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.timeline-filter__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.timeline-filter__title-icon {
+  color: var(--accent-primary);
+}
+
+.timeline-filter__close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.timeline-filter__section {
+  margin-bottom: 16px;
+}
+
+/* セクション見出し */
+.timeline-filter__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 右端に操作ボタンを置くセクション見出し（タグ） */
+.timeline-filter__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.timeline-filter__label-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* キーワード入力欄 */
+.timeline-filter__keyword {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.timeline-filter__keyword-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.timeline-filter__keyword-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  width: 100%;
+}
+
+.timeline-filter__keyword-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+}
+
+/* 期間プリセット */
+.timeline-filter__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* 「日付指定」選択時は、下に日付範囲の入力欄を表示する */
+.timeline-filter__presets--with-custom {
+  margin-bottom: 10px;
+}
+
+.timeline-filter__preset {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.timeline-filter__preset[aria-pressed="true"] {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 日付範囲の入力欄 */
+.timeline-filter__custom-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+}
+
+.timeline-filter__date-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeline-filter__date-label {
+  color: var(--text-muted);
+}
+
+.timeline-filter__date-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.timeline-filter__date-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+/* タグ */
+.timeline-filter__tag-clear {
+  background: none;
+  border: none;
+  color: var(--accent-primary);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0;
+}
+
+.timeline-filter__tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* チェックボックス風アイコン */
+.timeline-filter__tag-check {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.filter-tag-item.selected .timeline-filter__tag-check {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+}
+
+.timeline-filter__tag-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* フッター */
+.timeline-filter__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timeline-filter__footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-filter__done {
+  background: var(--accent-primary);
+  border: none;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}

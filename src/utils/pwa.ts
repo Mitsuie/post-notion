@@ -1,12 +1,14 @@
 /**
  * PWA および キャッシュ管理ユーティリティ
  */
+import { clearPersistedQueryCache } from './queryPersist';
 
 /**
- * Service Worker の登録解除と CacheStorage の全削除を行い、
+ * Service Worker の登録解除と CacheStorage・端末に保存したタイムライン等の全削除を行い、
  * キャッシュバスター付きで画面を強制再読み込みします。
  */
 export async function clearCacheAndReload(): Promise<void> {
+  clearPersistedQueryCache();
   try {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();

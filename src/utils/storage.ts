@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   defaultPinned: 'post-notion-pref-default-pinned',
   defaultDailyReport: 'post-notion-pref-default-daily-report',
   requireTag: 'post-notion-pref-require-tag',
+  queryCache: 'post-notion-query-cache',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

@@ -1,4 +1,4 @@
-import { parseInline, toRichText } from './richText.ts';
+import { parseInline, toRichText, type RichTextItem } from './richText.ts';
 import { limitNestedChildren } from './blocks.ts';
 
 // Markdownの行解析用型定義
@@ -8,6 +8,11 @@ export interface ParsedMarkdownLine {
   content: string;
   checked?: boolean;
 }
+
+// 生成するブロックの種別と本文（本文は種別名のキーの下に置く。例: { type: 'paragraph', paragraph: { rich_text } }）
+type NotionBlockType = ParsedMarkdownLine['type'] | 'code';
+type NotionBlockBody = { rich_text?: RichTextItem[]; checked?: boolean; language?: string; children?: NotionBlock[] };
+export type NotionBlock = { object: 'block'; type: NotionBlockType } & { [K in NotionBlockType]?: NotionBlockBody };
 
 // Notion のコードブロックが受け付ける言語（@notionhq/client の LanguageRequest）
 const NOTION_CODE_LANGUAGES = new Set([
@@ -119,7 +124,7 @@ export function parseMarkdownLine(line: string): ParsedMarkdownLine {
 }
 
 // パース結果からNotion API用ブロックオブジェクトを生成
-export function createNotionBlock(item: ParsedMarkdownLine): any {
+export function createNotionBlock(item: ParsedMarkdownLine): NotionBlock {
   // インライン装飾を解釈し、2,000 文字を超える要素は rich_text の複数要素に分割する
   const rich_text = item.content ? parseInline(item.content) : [];
 
@@ -179,7 +184,7 @@ export function createNotionBlock(item: ParsedMarkdownLine): any {
 }
 
 // フェンス内のコードから code ブロックを生成（行単位の解析・インライン装飾の解釈はしない）
-export function createCodeBlock(code: string, info: string): any {
+export function createCodeBlock(code: string, info: string): NotionBlock {
   return {
     object: 'block' as const,
     type: 'code' as const,
@@ -188,16 +193,17 @@ export function createCodeBlock(code: string, info: string): any {
 }
 
 // Markdown文字列をNotionネイティブ階層ブロック構造（children）へ変換
+// 戻り値の any は、既存テストがブロック種別を絞り込まずに本文（blocks[0].paragraph など）を参照するため
 export function parseMarkdownToNotionBlocks(markdown: string): any[] {
   if (!markdown || !markdown.trim()) return [];
 
   const lines = markdown.split('\n');
-  const rootBlocks: any[] = [];
+  const rootBlocks: NotionBlock[] = [];
 
   interface StackEntry {
     level: number;
-    block: any;
-    children: any[];
+    block: NotionBlock;
+    children: NotionBlock[];
   }
   const stack: StackEntry[] = [];
 
@@ -256,10 +262,11 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
       stack.length = 0;
       rootBlocks.push(block);
       if (['bulleted_list_item', 'numbered_list_item', 'to_do', 'quote', 'paragraph'].includes(item.type)) {
-        if (!block[item.type].children) {
-          block[item.type].children = [];
+        const body = block[item.type]!;
+        if (!body.children) {
+          body.children = [];
         }
-        stack.push({ level: 0, block, children: block[item.type].children });
+        stack.push({ level: 0, block, children: body.children });
       }
     } else {
       while (stack.length > 0 && stack[stack.length - 1].level >= targetLevel) {
@@ -270,18 +277,20 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
         const parent = stack[stack.length - 1];
         parent.children.push(block);
         if (['bulleted_list_item', 'numbered_list_item', 'to_do', 'quote', 'paragraph'].includes(item.type)) {
-          if (!block[item.type].children) {
-            block[item.type].children = [];
+          const body = block[item.type]!;
+          if (!body.children) {
+            body.children = [];
           }
-          stack.push({ level: targetLevel, block, children: block[item.type].children });
+          stack.push({ level: targetLevel, block, children: body.children });
         }
       } else {
         rootBlocks.push(block);
         if (['bulleted_list_item', 'numbered_list_item', 'to_do', 'quote', 'paragraph'].includes(item.type)) {
-          if (!block[item.type].children) {
-            block[item.type].children = [];
+          const body = block[item.type]!;
+          if (!body.children) {
+            body.children = [];
           }
-          stack.push({ level: 0, block, children: block[item.type].children });
+          stack.push({ level: 0, block, children: body.children });
         }
       }
     }
@@ -290,7 +299,7 @@ export function parseMarkdownToNotionBlocks(markdown: string): any[] {
   if (fence) rootBlocks.push(createCodeBlock(fence.lines.join('\n'), fence.info));
 
   // childrenが空のブロックから children プロパティを削除（APIエラー防止）
-  function cleanEmptyChildren(blocks: any[]) {
+  function cleanEmptyChildren(blocks: NotionBlock[]) {
     for (const b of blocks) {
       const typeObj = b[b.type];
       if (typeObj && typeObj.children) {

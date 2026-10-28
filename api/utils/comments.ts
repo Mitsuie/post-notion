@@ -1,4 +1,4 @@
-import type { Client, ListCommentsResponse } from '@notionhq/client';
+import type { Client, ListCommentsResponse, PageObjectResponse } from '@notionhq/client';
 import { resolvePostsSchema } from './schema.ts';
 
 /**
@@ -33,16 +33,18 @@ export async function syncCommentsCount(
   notion: Client,
   pageId: string,
   actualCount: number,
-  prefetchedPage?: any
+  prefetchedPage?: PageObjectResponse
 ): Promise<number | undefined> {
   try {
-    const page: any = prefetchedPage ?? (await notion.pages.retrieve({ page_id: pageId }));
+    // 取得したページは従来どおり形を確かめずに使う（properties がなければ例外になり、catch で undefined を返す）
+    const page = prefetchedPage ?? ((await notion.pages.retrieve({ page_id: pageId })) as PageObjectResponse);
     const countKey = resolvePostsSchema(page.properties).commentsCountKey;
     if (!countKey) return undefined;
 
+    const countProperty = page.properties[countKey];
     const storedCount =
-      typeof page.properties[countKey]?.number === 'number'
-        ? page.properties[countKey].number
+      countProperty?.type === 'number' && typeof countProperty.number === 'number'
+        ? countProperty.number
         : 0;
 
     if (storedCount !== actualCount) {
@@ -70,16 +72,18 @@ export async function syncCommentsCount(
 export async function incrementCommentsCount(
   notion: Client,
   pageId: string,
-  prefetchedPage?: any
+  prefetchedPage?: PageObjectResponse
 ): Promise<number | undefined> {
   try {
-    const page: any = prefetchedPage ?? (await notion.pages.retrieve({ page_id: pageId }));
+    // 取得したページは従来どおり形を確かめずに使う（properties がなければ例外になり、catch で undefined を返す）
+    const page = prefetchedPage ?? ((await notion.pages.retrieve({ page_id: pageId })) as PageObjectResponse);
     const countKey = resolvePostsSchema(page.properties).commentsCountKey;
     if (!countKey) return undefined;
 
+    const countProperty = page.properties[countKey];
     const currentCount =
-      typeof page.properties[countKey]?.number === 'number'
-        ? page.properties[countKey].number
+      countProperty?.type === 'number' && typeof countProperty.number === 'number'
+        ? countProperty.number
         : 0;
 
     const updatedCount = currentCount + 1;

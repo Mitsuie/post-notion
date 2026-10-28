@@ -1,6 +1,13 @@
 import { Hono } from 'hono';
 import { NotionToMarkdown } from 'notion-to-md';
 import type {
+  CommentObjectResponse,
+  CreateCommentParameters,
+  CreatePageParameters,
+  PageObjectResponse,
+  UpdatePageParameters,
+} from '@notionhq/client';
+import type {
   Bindings,
   PostItem,
   CreatePostPayload,
@@ -32,6 +39,9 @@ const INVALID_JSON_RESPONSE = { error: 'Invalid request body', message: 'リク�
 
 const isOptionalBoolean = (v: unknown) => v === undefined || typeof v === 'boolean';
 const isOptionalString = (v: unknown) => v === undefined || typeof v === 'string';
+
+// コメント作成者のうち参照する項目（Notion の応答の created_by は id のみ。name・avatar_url は含まれていれば使う）
+type CommentAuthorLike = { id?: string; name?: string; avatar_url?: string };
 
 // /:id 配下（本文・コメント）は投稿IDの形式を検証してから処理する
 postsRouter.use('/:id/*', async (c, next) => {
@@ -74,7 +84,8 @@ postsRouter.get('/', async (c) => {
       page_size: 50,
     });
 
-    const posts: PostItem[] = response.results.map(mapPageToPost);
+    // 結果はページとして扱う（従来どおり Partial の応答やデータソースの行は判定しない）
+    const posts: PostItem[] = (response.results as PageObjectResponse[]).map(mapPageToPost);
 
     return c.json({
       posts,
@@ -125,7 +136,7 @@ postsRouter.post('/', async (c) => {
 
     const sanitizedTitle = payload.title.replace(/[\r\n]+/g, ' ').trim();
 
-    const properties: Record<string, any> = {
+    const properties: NonNullable<CreatePageParameters['properties']> = {
       [titleKey]: {
         title: toRichText(sanitizedTitle).richText,
       },
@@ -269,7 +280,7 @@ postsRouter.patch('/:id', async (c) => {
     }
     const { pinnedKey, titleKey } = await getPostsSchema(notion, env.NOTION_POSTS_DATABASE_ID);
 
-    const properties: Record<string, any> = {};
+    const properties: NonNullable<UpdatePageParameters['properties']> = {};
     if (typeof payload.pinned === 'boolean' && pinnedKey) {
       properties[pinnedKey] = {
         checkbox: payload.pinned,
@@ -353,18 +364,19 @@ postsRouter.get('/:id/comments', async (c) => {
     const page = await assertPostsPage(notion, id, env.NOTION_POSTS_DATABASE_ID);
 
     const { results, truncated } = await listAllComments(notion, id);
-    const comments: CommentItem[] = results.map((comment: any) => {
+    const comments: CommentItem[] = results.map((comment) => {
       // Notion 上の装飾を Markdown 記法に戻す（アプリ内では MarkdownView で表示する）
       const text = richTextToMarkdown(comment.rich_text ?? []);
+      const author: CommentAuthorLike | undefined = comment.created_by;
       return {
         id: comment.id,
         discussionId: comment.discussion_id,
         text,
         createdTime: comment.created_time,
         createdBy: {
-          id: comment.created_by?.id || '',
-          name: comment.created_by?.name || 'User',
-          avatarUrl: comment.created_by?.avatar_url,
+          id: author?.id || '',
+          name: author?.name || 'User',
+          avatarUrl: author?.avatar_url,
         },
       };
     });
@@ -423,38 +435,41 @@ postsRouter.post('/:id/comments', async (c) => {
     // インライン装飾を Notion の装飾に変換する。100 要素を超えて切り捨てが起きる場合は、
     // 内容を失わないよう装飾なしのテキスト（2,000 文字ごとの分割のみ）で送る
     const inline = toInlineRichText(text);
-    const createArgs: any = {
-      rich_text: inline.truncated ? toRichText(text).richText : inline.richText,
-    };
+    const rich_text = inline.truncated ? toRichText(text).richText : inline.richText;
+    const createArgs: CreateCommentParameters = payload.discussionId
+      ? { rich_text, discussion_id: payload.discussionId }
+      : {
+          rich_text,
+          parent: {
+            page_id: id,
+          },
+        };
 
-    if (payload.discussionId) {
-      createArgs.discussion_id = payload.discussionId;
-    } else {
-      createArgs.parent = {
-        page_id: id,
-      };
-    }
-
-    let comment: any;
+    // rich_text を送った場合の応答は CommentObjectResponse として扱う（従来どおり形は確かめない）
+    let comment: CommentObjectResponse;
     try {
-      comment = await notion.comments.create(createArgs);
+      comment = (await notion.comments.create(createArgs)) as CommentObjectResponse;
     } catch (error: unknown) {
       // 装飾付きの rich_text を Notion が受け付けない場合（リンクの URL が長すぎる・不正など）は、
       // 装飾なしのテキストで 1 回だけ送り直す
       const decorated = !inline.truncated && inline.richText.some((t) => t.annotations || t.text.link);
       if (!decorated || !isValidationError(error)) throw error;
       console.error(`Failed to create formatted comment for post ${id}, retrying without formatting:`, error);
-      comment = await notion.comments.create({ ...createArgs, rich_text: toRichText(text).richText });
+      comment = (await notion.comments.create({
+        ...createArgs,
+        rich_text: toRichText(text).richText,
+      })) as CommentObjectResponse;
     }
+    const author: CommentAuthorLike | undefined = comment.created_by;
     const resultItem: CommentItem = {
       id: comment.id,
       discussionId: comment.discussion_id,
       text: richTextToMarkdown(comment.rich_text ?? []) || text,
       createdTime: comment.created_time || new Date().toISOString(),
       createdBy: {
-        id: comment.created_by?.id || '',
-        name: comment.created_by?.name || 'User',
-        avatarUrl: comment.created_by?.avatar_url,
+        id: author?.id || '',
+        name: author?.name || 'User',
+        avatarUrl: author?.avatar_url,
       },
     };
 

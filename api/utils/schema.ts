@@ -1,5 +1,5 @@
 import type { Client } from '@notionhq/client';
-import { findPostsPropertyKey, findPropertyKey } from './notion.ts';
+import { findPostsPropertyKey, findPropertyKey, type PropertyTypeMap } from './notion.ts';
 
 /**
  * Notion データベースのプロパティ名解決と、その期限付きキャッシュ
@@ -31,7 +31,7 @@ const dailyReportDateKeyCache = new Map<string, CacheEntry<string>>();
  * Posts DB（またはそのページ）のプロパティ定義から、本アプリで使うプロパティ名を解決する（純粋関数）
  * - 型フォールバックは POSTS_DB_USED_PROPERTY_DEFINITIONS の allowTypeFallback に従う（タイトルのみ）
  */
-export function resolvePostsSchema(properties: Record<string, any>): PostsSchema {
+export function resolvePostsSchema(properties: PropertyTypeMap): PostsSchema {
   return {
     titleKey: findPostsPropertyKey(properties, 'タイトル') || 'タイトル',
     tagsKey: findPostsPropertyKey(properties, 'タグ'),
@@ -79,10 +79,10 @@ export async function getDataSourceId(notion: Client, databaseId: string): Promi
 }
 
 // データソースのプロパティ定義を取得する
-async function retrieveDataSourceProperties(notion: Client, databaseId: string): Promise<Record<string, any>> {
+async function retrieveDataSourceProperties(notion: Client, databaseId: string): Promise<PropertyTypeMap> {
   const dataSourceId = await getDataSourceId(notion, databaseId);
   const dataSource = await notion.dataSources.retrieve({ data_source_id: dataSourceId });
-  return (dataSource as { properties?: Record<string, any> }).properties ?? {};
+  return ('properties' in dataSource ? dataSource.properties : undefined) ?? {};
 }
 
 /**

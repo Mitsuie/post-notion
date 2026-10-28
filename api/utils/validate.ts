@@ -1,6 +1,7 @@
 /**
  * リクエスト値の検証ユーティリティ
  */
+import type { PageObjectResponse } from '@notionhq/client';
 
 const NOTION_ID_PATTERN =
   /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
@@ -44,11 +45,12 @@ export async function assertPostsPage(
   notion: { pages: { retrieve: (args: { page_id: string }) => Promise<unknown> } },
   pageId: string,
   postsDatabaseId: string
-): Promise<any> {
-  const page: any = await notion.pages.retrieve({ page_id: pageId });
-  const parentDatabaseId = page?.parent?.database_id;
+): Promise<PageObjectResponse> {
+  const page = await notion.pages.retrieve({ page_id: pageId });
+  const parentDatabaseId = (page as { parent?: { database_id?: unknown } } | null | undefined)?.parent?.database_id;
   if (typeof parentDatabaseId !== 'string' || normalizeId(parentDatabaseId) !== normalizeId(postsDatabaseId)) {
     throw new PostNotFoundError(pageId);
   }
-  return page;
+  // parent を持つのは完全なページの応答のみ（PartialPageObjectResponse は object と id だけ）
+  return page as PageObjectResponse;
 }

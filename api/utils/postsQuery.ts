@@ -1,3 +1,4 @@
+import type { QueryDataSourceParameters } from '@notionhq/client';
 import type { PostsSchema } from './schema.ts';
 import { isNotionId } from './validate.ts';
 
@@ -14,6 +15,10 @@ export type PostsQueryParams = {
   q?: string; // タイトルに含むキーワード
   cursor?: string;
 };
+
+// and で結合する条件（作成日時・タグの OR 条件・タイトル）と並び順
+type FilterCondition = Extract<NonNullable<QueryDataSourceParameters['filter']>, { and: unknown }>['and'][number];
+type QuerySort = NonNullable<QueryDataSourceParameters['sorts']>[number];
 
 // キーワードの最大文字数
 export const MAX_KEYWORD_LENGTH = 100;
@@ -58,8 +63,13 @@ export function parsePostsQueryParams(query: Record<string, string | undefined>)
 export function buildPostsQuery(
   params: PostsQueryParams,
   schema: Partial<Pick<PostsSchema, 'titleKey' | 'tagsKey' | 'pinnedKey'>>
-): { filter?: any; sorts: any[]; start_cursor?: string } | null {
-  const conditions: any[] = [];
+): {
+  // 既存テストが filter.and を絞り込まずに参照するため any とする（中身は FilterCondition で型付けしている）
+  filter?: any;
+  sorts: QuerySort[];
+  start_cursor?: string;
+} | null {
+  const conditions: FilterCondition[] = [];
 
   if (params.from) {
     conditions.push({ timestamp: 'created_time', created_time: { on_or_after: params.from } });
@@ -80,7 +90,7 @@ export function buildPostsQuery(
   }
 
   const direction = params.order === 'asc' ? 'ascending' : 'descending';
-  const sorts: any[] = [];
+  const sorts: QuerySort[] = [];
   if (params.pin && schema.pinnedKey) {
     sorts.push({ property: schema.pinnedKey, direction: 'descending' });
   }

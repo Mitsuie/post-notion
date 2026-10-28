@@ -3,6 +3,7 @@ import { Client, RequestTimeoutError } from '@notionhq/client';
 import { app } from '../app.ts';
 import { invalidateSchemaCache } from '../utils/schema.ts';
 import { NOTION_UNAVAILABLE_MESSAGE, TAG_LIMIT_HINT, CREATE_TIMEOUT_MESSAGE } from '../utils/errors.ts';
+import { toRichText } from '../utils/richText.ts';
 
 const ORIGIN = 'http://localhost';
 const POSTS_DB = '0123456789abcdef0123456789abcdef';
@@ -85,6 +86,117 @@ describe('Posts DB への所属確認', () => {
     expect(res.status).toBe(201);
     expect(await res.json()).toMatchObject({ commentsCount: 3 });
     expect(notion.mock.calls.filter(([args]: any) => args.method === 'get')).toHaveLength(1);
+  });
+});
+
+describe('コメントのインライン装飾', () => {
+  // Notion API の応答と同じく plain_text・href を付ける
+  const toNotionResponse = (richText: any[]) =>
+    richText.map((t) => ({ ...t, plain_text: t.text.content, href: t.text.link?.url ?? null }));
+
+  // コメントを送り、comments.create に渡した rich_text を返す（Notion の応答は送った rich_text をそのまま返す）
+  async function postComment(text: string) {
+    notion.mockImplementation(async ({ path, method, body }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID, parent: { database_id: POSTS_DB }, properties: {} };
+      if (method === 'post' && path === 'comments') return { id: 'c1', discussion_id: 'd1', rich_text: toNotionResponse(body.rich_text) };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    const res = await call('POST', `/api/posts/${PAGE_ID}/comments`, JSON.stringify({ text }));
+    expect(res.status).toBe(201);
+    lastResponse = await res.json();
+    return notion.mock.calls.find(([args]: any) => args.path === 'comments')![0].body.rich_text;
+  }
+  let lastResponse: any;
+
+  it('太字・リンクを Notion の装飾に変換して送る', async () => {
+    const richText = await postComment('**太字** と [リンク](https://example.com)');
+    expect(richText).toEqual([
+      { type: 'text', text: { content: '太字' }, annotations: { bold: true } },
+      { type: 'text', text: { content: ' と ' } },
+      { type: 'text', text: { content: 'リンク', link: { url: 'https://example.com' } } },
+    ]);
+  });
+
+  it('複数行のコメントは改行を保つ', async () => {
+    const richText = await postComment('1行目 **太字**\n2行目 `code`\n\n4行目');
+    expect(richText.map((t: any) => t.text.content).join('')).toBe('1行目 太字\n2行目 code\n\n4行目');
+    expect(richText.filter((t: any) => t.annotations).map((t: any) => t.annotations)).toEqual([{ bold: true }, { code: true }]);
+  });
+
+  it('装飾が 100 要素を超える場合は、装飾なしの全文を送る', async () => {
+    const text = Array.from({ length: 80 }, (_, i) => `**b${i}**`).join(' ');
+    const richText = await postComment(text);
+    expect(richText).toEqual(toRichText(text).richText);
+    expect(richText.map((t: any) => t.text.content).join('')).toBe(text);
+    expect(lastResponse.comment.text).toBe(text);
+  });
+
+  it('投稿の応答の text は、Notion 上の装飾を Markdown 記法に戻して返す', async () => {
+    const text = '1行目 **太字** と [リンク](https://example.com)\n2行目 `code` ~~取消~~ *斜体*';
+    await postComment(text);
+    expect(lastResponse.comment.text).toBe(text);
+  });
+
+  // comments.create が errors の順に失敗する（足りなくなったら成功する）偽クライアント
+  function mockCreateFailures(errors: unknown[]) {
+    const queue = [...errors];
+    notion.mockImplementation(async ({ path, method, body }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID, parent: { database_id: POSTS_DB }, properties: {} };
+      if (method === 'post' && path === 'comments') {
+        if (queue.length) throw queue.shift();
+        return { id: 'c1', discussion_id: 'd1', rich_text: toNotionResponse(body.rich_text) };
+      }
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+  }
+  const createCalls = () => notion.mock.calls.filter(([args]: any) => args.method === 'post' && args.path === 'comments');
+  const validationError = () => Object.assign(new Error('body.rich_text[0].text.link.url should be a valid URL'), { code: 'validation_error' });
+
+  it('装飾付きの送信が validation_error なら、装飾なしで 1 回だけ送り直す', async () => {
+    const text = `**太字** と [リンク](https://example.com/${'a'.repeat(2100)})`;
+    mockCreateFailures([validationError()]);
+    const res = await call('POST', `/api/posts/${PAGE_ID}/comments`, JSON.stringify({ text }));
+    expect(res.status).toBe(201);
+    expect(createCalls()).toHaveLength(2);
+    expect(createCalls()[1][0].body.rich_text).toEqual(toRichText(text).richText);
+    expect(createCalls()[1][0].body.parent).toEqual({ page_id: PAGE_ID });
+    expect(((await res.json()) as any).comment.text).toBe(text);
+  });
+
+  it('送り直しも失敗したら従来どおりエラーを返す', async () => {
+    mockCreateFailures([validationError(), validationError()]);
+    const res = await call('POST', `/api/posts/${PAGE_ID}/comments`, JSON.stringify({ text: '**太字**' }));
+    expect(res.status).toBe(500);
+    expect(createCalls()).toHaveLength(2);
+  });
+
+  it('validation_error 以外のエラーや、装飾のないコメントでは送り直さない', async () => {
+    mockCreateFailures([Object.assign(new Error('rate limited'), { code: 'rate_limited' })]);
+    expect((await call('POST', `/api/posts/${PAGE_ID}/comments`, JSON.stringify({ text: '**太字**' }))).status).toBe(503);
+    expect(createCalls()).toHaveLength(1);
+
+    notion.mockClear();
+    mockCreateFailures([validationError()]);
+    expect((await call('POST', `/api/posts/${PAGE_ID}/comments`, JSON.stringify({ text: '装飾なし' }))).status).toBe(500);
+    expect(createCalls()).toHaveLength(1);
+  });
+
+  it('コメント一覧の text は、Notion 上の装飾を Markdown 記法に戻して返す', async () => {
+    const plain = { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: 'default' };
+    const richText = [
+      { type: 'text', text: { content: '太字', link: null }, annotations: { ...plain, bold: true }, plain_text: '太字', href: null },
+      { type: 'text', text: { content: ' と ', link: null }, annotations: plain, plain_text: ' と ', href: null },
+      { type: 'text', text: { content: 'リンク', link: { url: 'https://example.com' } }, annotations: plain, plain_text: 'リンク', href: 'https://example.com' },
+    ];
+    notion.mockImplementation(async ({ path, method }: any) => {
+      if (method === 'get' && path === `pages/${PAGE_ID}`) return { id: PAGE_ID, parent: { database_id: POSTS_DB }, properties: {} };
+      if (method === 'get' && path === 'comments')
+        return { results: [{ id: 'c1', discussion_id: 'd1', rich_text: richText, created_time: '2026-10-28T00:00:00.000Z' }], has_more: false, next_cursor: null };
+      throw new Error(`unexpected ${method} ${path}`);
+    });
+    const res = await app.request(`${ORIGIN}/api/posts/${PAGE_ID}/comments`, {}, ENV);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as any).comments[0].text).toBe('**太字** と [リンク](https://example.com)');
   });
 });
 

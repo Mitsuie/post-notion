@@ -46,14 +46,15 @@ export function Logo({ size = 'md', showText = true }: LogoProps) {
             fontSize,
             fontFamily: "'JetBrains Mono', monospace",
             letterSpacing: '-0.02em',
+            color: 'var(--logo-text)',
             display: 'inline-flex',
             alignItems: 'baseline',
             lineHeight: 1,
           }}
         >
-          <span style={{ color: 'var(--logo-post)', fontWeight: 700 }}>Post</span>
-          <span style={{ color: 'var(--logo-sep)', margin: '0 2px', fontWeight: 500 }}>-</span>
-          <span style={{ color: 'var(--logo-notion)', fontWeight: 800 }}>Notion</span>
+          <span style={{ fontWeight: 700 }}>Post</span>
+          <span style={{ margin: '0 2px', fontWeight: 500 }}>-</span>
+          <span style={{ fontWeight: 800 }}>Notion</span>
         </span>
       )}
     </div>

@@ -159,7 +159,7 @@ export function SettingsDrawer({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)',
+            paddingTop: 'var(--app-safe-top)',
             paddingBottom: '16px',
             paddingLeft: '20px',
             paddingRight: 'max(env(safe-area-inset-right, 0px), 20px)',

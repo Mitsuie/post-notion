@@ -206,7 +206,7 @@ export default function App() {
       style={{
         maxWidth: '640px',
         margin: '0 auto',
-        paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)',
+        paddingTop: 'var(--app-safe-top)',
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)',
         paddingLeft: 'max(env(safe-area-inset-left, 0px), 16px)',
         paddingRight: 'max(env(safe-area-inset-right, 0px), 16px)',

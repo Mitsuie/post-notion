@@ -22,10 +22,8 @@
   --accent-light: #eef2ff;
   --accent-border: #c7d2fe;
 
-  /* Industrial Logo Colors (Proposal 2) */
-  --logo-post: #09090b;
-  --logo-sep: #94a3b8;
-  --logo-notion: #334155;
+  /* Logo Color */
+  --logo-text: #0f172a;
   
   --pinned-color: #b45309;
   --pinned-bg: #fef3c7;
@@ -75,10 +73,8 @@
   --accent-light: rgba(99, 102, 241, 0.15);
   --accent-border: rgba(99, 102, 241, 0.3);
 
-  /* Industrial Logo Colors (Proposal 2 - Dark) */
-  --logo-post: #f8fafc;
-  --logo-sep: #64748b;
-  --logo-notion: #cbd5e1;
+  /* Logo Color (Dark) */
+  --logo-text: #f8fafc;
   
   --pinned-color: #fbbf24;
   --pinned-bg: rgba(251, 191, 36, 0.12);
@@ -103,7 +99,7 @@
    ========================================================================== */
 .toast {
   position: fixed;
-  top: calc(max(env(safe-area-inset-top, 0px), 16px) + 8px);
+  top: calc(var(--app-safe-top) + 8px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
@@ -147,6 +143,14 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
+  --app-top-offset: 16px;
+  --app-safe-top: calc(env(safe-area-inset-top, 0px) + var(--app-top-offset));
+}
+
+@media (display-mode: standalone) {
+  :root {
+    --app-top-offset: 24px;
+  }
 }
 
 * {
